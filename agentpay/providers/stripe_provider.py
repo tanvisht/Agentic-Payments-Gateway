@@ -30,6 +30,11 @@ _WEBHOOK_EVENTS = {
 }
 
 
+def _d(obj: Any) -> Any:
+    """stripe-python >= 15 objects are not dicts; normalize everything we read."""
+    return obj.to_dict() if hasattr(obj, "to_dict") else obj
+
+
 class StripeProvider(PaymentProvider):
     name = "stripe"
 
@@ -50,6 +55,7 @@ class StripeProvider(PaymentProvider):
 
     # -- helpers ------------------------------------------------------
     def _result(self, pi: Any) -> ProviderResult:
+        pi = _d(pi)
         status = _STATUS.get(pi["status"])
         if status is None:
             raise ProviderError(f"unexpected stripe status {pi['status']}", details={"stripe_status": pi["status"]})
@@ -65,7 +71,7 @@ class StripeProvider(PaymentProvider):
         if isinstance(exc, s.CardError):
             err = getattr(exc, "error", None)
             code = getattr(err, "decline_code", None) or getattr(exc, "code", None) or "card_declined"
-            pi = getattr(err, "payment_intent", None)
+            pi = _d(getattr(err, "payment_intent", None))
             details = {"provider_ref": pi["id"]} if pi else {}
             return CardDeclined(exc.user_message or str(exc), decline_code=code, details=details)
         if isinstance(exc, (s.RateLimitError, s.APIConnectionError)):
@@ -128,6 +134,7 @@ class StripeProvider(PaymentProvider):
             r = self.client.v1.refunds.create(params, {"idempotency_key": f"ref:{idempotency_key}"})
         except Exception as exc:  # noqa: BLE001
             raise self._translate(exc) from exc
+        r = _d(r)
         if r["status"] == "failed":
             raise ProviderError("refund failed", details={"refund": r["id"]})
         return ProviderResult(ProviderStatus.REFUNDED, r["id"], r["amount"], raw={"status": r["status"]})
@@ -146,6 +153,7 @@ class StripeProvider(PaymentProvider):
         except Exception as exc:  # noqa: BLE001 — SignatureVerificationError / ValueError
             from agentpay.core.errors import SignatureError
             raise SignatureError(f"stripe webhook signature invalid: {exc}") from exc
+        event = _d(event)
         obj = event["data"]["object"]
         ref = obj.get("payment_intent") if event["type"].startswith("charge.") else obj.get("id")
         if not ref:

@@ -14,7 +14,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from agentpay import __version__
 from agentpay.api import schemas as sc
 from agentpay.api.auth import Caller, authenticate
-from agentpay.core.errors import AuthenticationError, GatewayError, NotFound
+from pydantic import ValidationError
+
+from agentpay.core.errors import AuthenticationError, GatewayError, NotFound, ValidationFailed
 from agentpay.core.models import Event, Mandate, PaymentIntent
 from agentpay.gateway import Gateway
 
@@ -47,6 +49,14 @@ def create_app(gw: Gateway | None = None) -> FastAPI:
         if c.kind != "admin":
             raise AuthenticationError("admin credentials required")
         return c
+
+    async def parse(model, request: Request):
+        """Parse the body only *after* authentication, so unauthenticated callers learn nothing."""
+        raw = await request.body()
+        try:
+            return model.model_validate_json(raw or b"{}")
+        except ValidationError as exc:
+            raise ValidationFailed("invalid request body", details={"errors": json.loads(exc.json(include_url=False))}) from None
 
     def own(caller: Caller, pi: PaymentIntent) -> PaymentIntent:
         if caller.kind == "agent" and pi.agent_id != caller.agent.id:  # type: ignore[union-attr]
@@ -133,10 +143,11 @@ def create_app(gw: Gateway | None = None) -> FastAPI:
 
     # -- payments (agent, signed) ----------------------------------------
     @app.post("/v1/payment_intents")
-    async def create_intent(body: sc.PaymentIntentIn, request: Request):
+    async def create_intent(request: Request):
         caller = await authenticate(gw, request, require_signature=True)
         if caller.kind != "agent":
             raise AuthenticationError("payment intents are created by agents")
+        body = await parse(sc.PaymentIntentIn, request)
 
         def run():
             pi = gw.payments.create(agent=caller.agent, **body.model_dump())  # type: ignore[arg-type]
@@ -159,29 +170,31 @@ def create_app(gw: Gateway | None = None) -> FastAPI:
         pi = own(caller, gw.payments.get(intent_id))
         return {**_dump(pi), "ledger": gw.ledger.entries(pi.id)}
 
-    async def _mutate(intent_id: str, request: Request, body: dict | None, op):
+    async def _mutate(intent_id: str, request: Request, model, op):
         caller = await authenticate(gw, request, require_signature=True)
         own(caller, gw.payments.get(intent_id))
-        return await idempotent(request, caller, body, lambda: (200, _dump(op(caller))))
+        body = await parse(model, request) if model else None
+        return await idempotent(request, caller, body.model_dump() if body else None,
+                                lambda: (200, _dump(op(body))))
 
     @app.post("/v1/payment_intents/{intent_id}/capture")
-    async def capture(intent_id: str, body: sc.CaptureIn, request: Request):
-        return await _mutate(intent_id, request, body.model_dump(), lambda c: gw.payments.capture(intent_id, body.amount))
+    async def capture(intent_id: str, request: Request):
+        return await _mutate(intent_id, request, sc.CaptureIn, lambda b: gw.payments.capture(intent_id, b.amount))
 
     @app.post("/v1/payment_intents/{intent_id}/cancel")
     async def cancel(intent_id: str, request: Request):
-        return await _mutate(intent_id, request, None, lambda c: gw.payments.cancel(intent_id))
+        return await _mutate(intent_id, request, None, lambda b: gw.payments.cancel(intent_id))
 
     @app.post("/v1/payment_intents/{intent_id}/refunds")
-    async def refund(intent_id: str, body: sc.RefundIn, request: Request):
-        return await _mutate(intent_id, request, body.model_dump(),
-                             lambda c: gw.payments.refund(intent_id, body.amount, body.reason))
+    async def refund(intent_id: str, request: Request):
+        return await _mutate(intent_id, request, sc.RefundIn, lambda b: gw.payments.refund(intent_id, b.amount, b.reason))
 
     @app.post("/v1/payment_intents/{intent_id}/retry")
-    async def retry(intent_id: str, body: sc.RetryIn, request: Request):
+    async def retry(intent_id: str, request: Request):
         caller = await authenticate(gw, request, require_signature=True)
         if caller.kind != "agent":
             raise AuthenticationError("only the owning agent can retry")
+        body = await parse(sc.RetryIn, request)
         return await idempotent(request, caller, body.model_dump(),
                                 lambda: (200, _dump(gw.payments.retry(intent_id, agent=caller.agent, payment_method=body.payment_method))))
 
