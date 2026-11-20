@@ -277,13 +277,9 @@ class PaymentService:
         return self._apply_result(pi, res)
 
     def apply_webhook(self, update: WebhookUpdate) -> PaymentIntent | None:
-        pi = self.store.execute(
-            "SELECT body FROM docs WHERE kind='payment_intent' AND json_extract(body,'$.provider_ref')=?",
-            (update.provider_ref,),
-        ).fetchone()
-        if not pi:
+        intent = self.store.find_by_field("payment_intent", "provider_ref", update.provider_ref, PaymentIntent)
+        if not intent:
             return None
-        intent = PaymentIntent.model_validate_json(pi[0])
         if update.status in (ProviderStatus.CAPTURED, ProviderStatus.AUTHORIZED, ProviderStatus.CANCELED) \
                 and intent.status in (S.PROCESSING, S.REQUIRES_ACTION):
             return self._apply_result(intent, ProviderResult(update.status, update.provider_ref, intent.amount))

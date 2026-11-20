@@ -12,7 +12,7 @@ from agentpay.providers.base import AuthorizeRequest, ProviderStatus
 from agentpay.providers.mock import MockProvider
 from agentpay.providers.router import CircuitBreaker, ProviderRouter
 from agentpay.providers.stripe_provider import StripeProvider
-from agentpay.storage import Store
+from agentpay.storage import SqliteStore as Store
 from agentpay.webhooks import signing
 from agentpay.webhooks.dispatcher import EventBus
 

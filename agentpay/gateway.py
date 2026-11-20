@@ -16,7 +16,7 @@ from agentpay.providers.base import PaymentProvider
 from agentpay.providers.mock import MockProvider
 from agentpay.providers.router import ProviderRouter
 from agentpay.risk.engine import RiskEngine
-from agentpay.storage import Store
+from agentpay.storage import Store, open_store
 from agentpay.webhooks.dispatcher import EventBus
 
 
@@ -59,7 +59,7 @@ class Gateway:
     def build(cls, settings: Settings | None = None, *, providers: list[PaymentProvider] | None = None,
               risk: RiskEngine | None = None, store: Store | None = None, events: EventBus | None = None) -> "Gateway":
         s = settings or Settings()
-        st = store or Store(s.db_path)
+        st = store or open_store(s.db_path)
         router = ProviderRouter(providers or _build_providers(s))
         mandates, ledger = MandateService(st), Ledger(st)
         rk = risk or RiskEngine()

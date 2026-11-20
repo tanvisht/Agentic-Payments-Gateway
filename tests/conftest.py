@@ -14,9 +14,25 @@ from agentpay.risk.engine import RiskConfig, RiskEngine
 ADMIN = "test-admin"
 
 
+import os
+
+PG_DSN = os.environ.get("AGENTPAY_TEST_POSTGRES_DSN")
+
+
+def _fresh_store():
+    """SQLite in-memory by default; the whole suite reruns on Postgres when
+    AGENTPAY_TEST_POSTGRES_DSN is set (CI does this)."""
+    if not PG_DSN:
+        return None
+    from agentpay.storage.postgres import PostgresStore
+    st = PostgresStore(PG_DSN)
+    st.execute("TRUNCATE docs, idempotency, nonces, ledger")
+    return st
+
+
 @pytest.fixture
 def gw():
-    return Gateway.build(Settings(admin_key=ADMIN, async_webhooks=False, default_provider="mock"),
+    return Gateway.build(Settings(admin_key=ADMIN, async_webhooks=False, default_provider="mock"), store=_fresh_store(),
                          providers=[MockProvider("mock"), MockProvider("mock_backup")],
                          risk=RiskEngine(RiskConfig(velocity_max=50)))
 

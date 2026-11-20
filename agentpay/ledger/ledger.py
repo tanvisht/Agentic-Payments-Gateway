@@ -40,11 +40,10 @@ class Ledger:
             raise ValidationFailed("unbalanced journal entry")
         txn = new_id("jrnl")
         ts = now()
-        with self.store.tx() as c:
-            c.executemany(
-                "INSERT INTO ledger(txn_id,account,currency,debit,credit,ref,memo,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                [(txn, p.account, currency, p.debit, p.credit, ref, memo, ts) for p in postings],
-            )
+        self.store.executemany(
+            "INSERT INTO ledger(txn_id,account,currency,debit,credit,ref,memo,created_at) VALUES(?,?,?,?,?,?,?,?)",
+            [(txn, p.account, currency, p.debit, p.credit, ref, memo, ts) for p in postings],
+        )
         return txn
 
     def balance(self, account: str, currency: str) -> int:
@@ -64,7 +63,7 @@ class Ledger:
 
     def trial_balance(self) -> dict[str, int]:
         """Per-currency sum of debits − credits. Must be all zeros."""
-        rows = self.store.execute("SELECT currency, SUM(debit)-SUM(credit) FROM ledger GROUP BY currency").fetchall()
+        rows = self.store.execute("SELECT currency, SUM(debit)-SUM(credit) FROM ledger GROUP BY currency ORDER BY currency").fetchall()
         return {cur: int(v) for cur, v in rows}
 
     # -- domain helpers ----------------------------------------------
