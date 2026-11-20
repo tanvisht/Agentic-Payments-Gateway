@@ -51,7 +51,7 @@ Card networks were built on a simple assumption: **the person tapping the card i
 
 - **Principal**: the human or org that owns the money and a signing key. Their private key never touches the gateway.
 - **Agent**: an autonomous program with its own key pair and API key, registered under a principal.
-- **Mandate**: a principal-signed JSON document: *"agent X may spend up to $200 per transaction, $500 total, USD only, at nike.com or hoka.com, running and apparel only, until Friday."*
+- **Mandate**: a principal-signed JSON document: *"agent X may spend up to $200 per transaction, $500 total, USD only, at apple.com or sony.com, electronics and accesories only, until Friday."*
 - **Payment intent**: one attempt to move money, driven through an explicit state machine.
 - **Provider**: a pluggable processor adapter (Stripe today). The gateway routes, fails over, and normalizes.
 - **Ledger**: an append-only double-entry journal; every cent is accounted for and reconcilable.
