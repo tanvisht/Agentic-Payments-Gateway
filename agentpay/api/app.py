@@ -39,8 +39,11 @@ def _public_agent(a) -> dict:
     return d
 
 
-def create_app(gw: Gateway | None = None) -> FastAPI:
+def create_app(gw: Gateway | None = None, *, merchant=None) -> FastAPI:
     gw = gw or Gateway.build()
+    from agentpay.acp.rpc import build_router
+    from agentpay.acp.service import MerchantService
+    merchant = merchant or MerchantService(gw)
     app = FastAPI(title="AgentPay Gateway", version=__version__,
                   description="Contactless, mandate-bound payments for autonomous AI agents.")
     app.state.gw = gw
@@ -117,6 +120,9 @@ def create_app(gw: Gateway | None = None) -> FastAPI:
             raise
         gw.idempotency.complete(caller.scope, key, status, out)
         return JSONResponse(out, status_code=status)
+
+    app.state.merchant = merchant
+    app.include_router(build_router(merchant))
 
     # -- meta ---------------------------------------------------------
     @app.get("/healthz")
