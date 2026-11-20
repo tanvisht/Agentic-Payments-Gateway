@@ -9,6 +9,11 @@ class PrincipalIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     public_key: str
     default_payment_method: str | None = None
+    email: str | None = Field(default=None, max_length=320)
+
+
+class SetupIn(BaseModel):
+    provider: str | None = None
 
 
 class AgentIn(BaseModel):

@@ -145,6 +145,27 @@ class StripeProvider(PaymentProvider):
         except Exception as exc:  # noqa: BLE001
             raise self._translate(exc) from exc
 
+    def create_customer_setup(self, principal_id: str, email: str | None, idempotency_key: str) -> dict:
+        try:
+            cust = _d(self.client.v1.customers.create(
+                {k: v for k, v in {"email": email, "metadata": {"agentpay_principal": principal_id}}.items() if v},
+                {"idempotency_key": f"cus:{idempotency_key}"}))
+            si = _d(self.client.v1.setup_intents.create(
+                {"customer": cust["id"], "usage": "off_session", "automatic_payment_methods": {"enabled": True},
+                 "metadata": {"agentpay_principal": principal_id}},
+                {"idempotency_key": f"seti:{idempotency_key}"}))
+        except Exception as exc:  # noqa: BLE001
+            raise self._translate(exc) from exc
+        return {"customer": cust["id"], "setup_intent": si["id"], "client_secret": si["client_secret"]}
+
+    def attach_result(self, setup_ref: str) -> dict:
+        try:
+            si = _d(self.client.v1.setup_intents.retrieve(setup_ref))
+        except Exception as exc:  # noqa: BLE001
+            raise self._translate(exc) from exc
+        pm = si.get("payment_method")
+        return {"status": si["status"], "payment_method": pm["id"] if isinstance(pm, dict) else pm, "customer": si.get("customer")}
+
     def parse_webhook(self, payload: bytes, signature_header: str | None) -> WebhookUpdate | None:
         if not self.webhook_secret:
             raise ProviderError("STRIPE_WEBHOOK_SECRET not configured")

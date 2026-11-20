@@ -69,9 +69,10 @@ class Gateway:
         return cls(s, st, router, mandates, ledger, rk, ev, payments, Idempotency(st))
 
     # -- registry ----------------------------------------------------
-    def create_principal(self, name: str, public_key: str, default_payment_method: str | None = None) -> Principal:
+    def create_principal(self, name: str, public_key: str, default_payment_method: str | None = None,
+                         email: str | None = None) -> Principal:
         _check_key(public_key)
-        p = Principal(name=name, public_key=public_key, default_payment_method=default_payment_method)
+        p = Principal(name=name, public_key=public_key, default_payment_method=default_payment_method, email=email)
         self.store.put("principal", p)
         return p
 
@@ -79,6 +80,29 @@ class Gateway:
         p = self.store.get("principal", pid, Principal)
         if not p:
             raise NotFound(f"principal {pid} not found")
+        return p
+
+    def start_payment_method_setup(self, principal_id: str, provider: str | None = None) -> dict:
+        p = self.get_principal(principal_id)
+        prov = self.router.get(provider or self.payments.default_provider or self.router.order[0])
+        out = prov.create_customer_setup(p.id, p.email, idempotency_key=f"{p.id}:{len(p.pending_setups)}:{prov.name}")
+        p.provider_customers[prov.name] = out["customer"]
+        p.pending_setups[prov.name] = out["setup_intent"]
+        self.store.put("principal", p)
+        return {"provider": prov.name, **out}
+
+    def complete_payment_method_setup(self, principal_id: str, provider: str | None = None) -> Principal:
+        p = self.get_principal(principal_id)
+        name = provider or next(iter(p.pending_setups), None)
+        if not name or name not in p.pending_setups:
+            raise ValidationFailed("no pending payment method setup for this principal")
+        res = self.router.get(name).attach_result(p.pending_setups[name])
+        if res["status"] != "succeeded" or not res.get("payment_method"):
+            raise ValidationFailed(f"setup not complete (status={res['status']})")
+        p.default_payment_method = res["payment_method"]
+        p.pending_setups.pop(name)
+        self.store.put("principal", p)
+        self.events.emit("principal.payment_method_attached", {"principal_id": p.id, "provider": name})
         return p
 
     def create_agent(self, principal_id: str, name: str, public_key: str) -> tuple[Agent, str]:

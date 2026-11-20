@@ -110,9 +110,15 @@ class PaymentService:
         transition(pi, S.PROCESSING)
         pi.next_action = None
         self._save(pi)
+        principal = self.store.get("principal", pi.principal_id, Principal)
+        meta = dict(pi.metadata)
+        if principal and principal.provider_customers:
+            # Off-session charges of a saved card require the owning customer.
+            cust = principal.provider_customers.get(pi.provider or "") or next(iter(principal.provider_customers.values()))
+            meta.setdefault("stripe_customer", cust)
         req = AuthorizeRequest(intent_id=pi.id, amount=pi.amount, currency=pi.currency, payment_method=pi.payment_method or "",
                                capture=pi.capture_method == "automatic", idempotency_key=f"{pi.id}:{len(pi.attempts)}",
-                               description=pi.description, merchant_id=pi.merchant_id, metadata=dict(pi.metadata))
+                               description=pi.description, merchant_id=pi.merchant_id, metadata=meta)
         try:
             provider, res, attempts = self.router.authorize(req, preferred=pi.provider)
         except (CardDeclined, ProviderError, NoProviderAvailable, ValidationFailed) as exc:

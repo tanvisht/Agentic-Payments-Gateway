@@ -177,3 +177,31 @@ def test_webhook_delivery_retries():
     bus.emit("payment_intent.succeeded", {"x": 1})
     assert len(seen) == 3 and bus.deliveries[-1]["ok"]
     assert signing.verify("s", seen[-1].content, seen[-1].headers[signing.HEADER])
+
+
+# -- onboarding -------------------------------------------------------------
+class FakeCustomers:
+    def create(self, params, opts):
+        return {"id": "cus_1"}
+
+
+class FakeSetupIntents:
+    def __init__(self):
+        self.params = None
+
+    def create(self, params, opts):
+        self.params = params
+        return {"id": "seti_1", "client_secret": "seti_1_secret_x"}
+
+    def retrieve(self, ref):
+        return {"id": ref, "status": "succeeded", "payment_method": "pm_123", "customer": "cus_1"}
+
+
+def test_stripe_setup_intent_off_session():
+    si = FakeSetupIntents()
+    client = SimpleNamespace(v1=SimpleNamespace(customers=FakeCustomers(), setup_intents=si))
+    p = StripeProvider(client=client)
+    out = p.create_customer_setup("prn_1", "a@b.co", "k")
+    assert out == {"customer": "cus_1", "setup_intent": "seti_1", "client_secret": "seti_1_secret_x"}
+    assert si.params["usage"] == "off_session"
+    assert p.attach_result("seti_1")["payment_method"] == "pm_123"

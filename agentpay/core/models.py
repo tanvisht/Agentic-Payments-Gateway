@@ -29,6 +29,9 @@ class Principal(BaseModel):
     name: str
     public_key: str  # base64 raw Ed25519
     default_payment_method: str | None = None
+    email: str | None = None
+    provider_customers: dict[str, str] = Field(default_factory=dict)   # provider -> customer id
+    pending_setups: dict[str, str] = Field(default_factory=dict)       # provider -> setup intent id
     created_at: int = Field(default_factory=now)
 
 

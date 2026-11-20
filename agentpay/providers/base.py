@@ -75,5 +75,18 @@ class PaymentProvider(ABC):
     @abstractmethod
     def retrieve(self, provider_ref: str) -> ProviderResult: ...
 
+    def create_customer_setup(self, principal_id: str, email: str | None, idempotency_key: str) -> dict[str, Any]:
+        """Start saving a payment method for off-session agent payments.
+
+        Returns {"customer": ..., "setup_intent": ..., "client_secret": ...}. The
+        client_secret goes to the principal's browser (Stripe.js / Payment Element);
+        the card never touches the gateway.
+        """
+        raise NotImplementedError(f"{self.name} does not support customer onboarding")
+
+    def attach_result(self, setup_ref: str) -> dict[str, Any]:
+        """Read back a completed setup: {"status", "payment_method", "customer"}."""
+        raise NotImplementedError
+
     def parse_webhook(self, payload: bytes, signature_header: str | None) -> WebhookUpdate | None:  # pragma: no cover
         return None

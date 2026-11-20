@@ -103,3 +103,22 @@ class MockProvider(PaymentProvider):
     def retrieve(self, provider_ref: str) -> ProviderResult:
         obj = self._objects[provider_ref]
         return ProviderResult(ProviderStatus(obj["status"]), provider_ref, obj["amount"])
+
+    # -- onboarding ------------------------------------------------------
+    def create_customer_setup(self, principal_id: str, email: str | None, idempotency_key: str) -> dict:
+        if idempotency_key in self._idem:
+            return self._idem[idempotency_key]  # type: ignore[return-value]
+        n = next(self._ids)
+        out = {"customer": f"cus_mock_{n}", "setup_intent": f"seti_mock_{n}", "client_secret": f"seti_mock_{n}_secret"}
+        self._objects[out["setup_intent"]] = {"status": "requires_payment_method", "customer": out["customer"]}
+        self._idem[idempotency_key] = out  # type: ignore[assignment]
+        return out
+
+    def complete_setup(self, setup_ref: str, payment_method: str = "pm_card_visa") -> None:
+        self._objects[setup_ref].update(status="succeeded", payment_method=payment_method)
+
+    def attach_result(self, setup_ref: str) -> dict:
+        o = self._objects.get(setup_ref)
+        if not o:
+            raise ProviderError("unknown setup intent")
+        return {"status": o["status"], "payment_method": o.get("payment_method"), "customer": o["customer"]}

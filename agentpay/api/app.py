@@ -127,7 +127,18 @@ def create_app(gw: Gateway | None = None) -> FastAPI:
     @app.post("/v1/principals", status_code=201)
     async def create_principal(body: sc.PrincipalIn, request: Request):
         await admin(request)
-        return _dump(gw.create_principal(body.name, body.public_key, body.default_payment_method))
+        return _dump(gw.create_principal(body.name, body.public_key, body.default_payment_method, body.email))
+
+    @app.post("/v1/principals/{principal_id}/payment_method_setup", status_code=201)
+    async def start_setup(principal_id: str, body: sc.SetupIn, request: Request):
+        """Returns a SetupIntent client_secret for the principal's browser to confirm."""
+        await admin(request)
+        return gw.start_payment_method_setup(principal_id, body.provider)
+
+    @app.post("/v1/principals/{principal_id}/payment_method_setup/complete")
+    async def complete_setup(principal_id: str, body: sc.SetupIn, request: Request):
+        await admin(request)
+        return _dump(gw.complete_payment_method_setup(principal_id, body.provider))
 
     @app.post("/v1/agents", status_code=201)
     async def create_agent(body: sc.AgentIn, request: Request):
