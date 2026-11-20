@@ -247,6 +247,23 @@ def create_app(gw: Gateway | None = None, *, merchant=None) -> FastAPI:
         return await idempotent(request, caller, body.model_dump(),
                                 lambda: (200, _dump(gw.payments.retry(intent_id, agent=caller.agent, payment_method=body.payment_method))))
 
+    @app.get("/v1/payment_intents/{intent_id}/receipt")
+    async def receipt(intent_id: str, request: Request, format: str = "json"):
+        caller = await authenticate(gw, request, require_signature=False)
+        own(caller, gw.payments.get(intent_id))
+        rec = gw.receipt(intent_id)
+        if format == "pdf":
+            from fastapi.responses import Response
+            from agentpay.core.receipts import to_pdf
+            return Response(to_pdf(rec), media_type="application/pdf",
+                            headers={"Content-Disposition": f'inline; filename="receipt-{intent_id}.pdf"'})
+        return rec
+
+    @app.get("/.well-known/agentpay")
+    def discovery():
+        return {"gateway_key": gw.signing_key.public_b64, "version": __version__,
+                "receipt_type": "agentpay.receipt.v1", "acp": "/acp/rpc"}
+
     @app.post("/v1/payment_intents/{intent_id}/sync")
     async def sync(intent_id: str, request: Request):
         caller = await authenticate(gw, request, require_signature=False)

@@ -54,6 +54,7 @@ class Gateway:
     events: EventBus
     payments: PaymentService
     idempotency: Idempotency
+    signing_key: crypto.KeyPair | None = None
 
     @classmethod
     def build(cls, settings: Settings | None = None, *, providers: list[PaymentProvider] | None = None,
@@ -66,7 +67,13 @@ class Gateway:
         ev = events or EventBus(st, async_delivery=s.async_webhooks)
         default = s.default_provider if s.default_provider in router.providers else None
         payments = PaymentService(st, router, mandates, ledger, rk, ev, default_provider=default)
-        return cls(s, st, router, mandates, ledger, rk, ev, payments, Idempotency(st))
+        key = crypto.KeyPair.from_private_b64(s.signing_key) if s.signing_key else crypto.KeyPair.generate()
+        return cls(s, st, router, mandates, ledger, rk, ev, payments, Idempotency(st), key)
+
+    def receipt(self, intent_id: str) -> dict:
+        from agentpay.core import receipts
+        pi = self.payments.get(intent_id)
+        return receipts.build(pi, self.mandates.get(pi.mandate_id), self.ledger.entries(pi.id), self.signing_key)
 
     # -- registry ----------------------------------------------------
     def create_principal(self, name: str, public_key: str, default_payment_method: str | None = None,
