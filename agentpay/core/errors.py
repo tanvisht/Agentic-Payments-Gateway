@@ -72,3 +72,7 @@ class CardDeclined(ProviderError):
 
 class NoProviderAvailable(GatewayError):
     code, http_status = "no_provider_available", 503
+
+
+class RateLimited(GatewayError):
+    code, http_status = "rate_limited", 429

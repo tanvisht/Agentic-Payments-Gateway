@@ -12,3 +12,5 @@ class Settings:
     providers: list[str] = field(default_factory=lambda: os.environ.get("AGENTPAY_PROVIDERS", "").split(",") if os.environ.get("AGENTPAY_PROVIDERS") else [])
     signature_tolerance_s: int = 300
     async_webhooks: bool = True
+    rate_per_s: float = 20.0
+    rate_burst: int = 60

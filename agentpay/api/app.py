@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from typing import Any, Awaitable, Callable
 
 from fastapi import FastAPI, Request
@@ -18,9 +19,14 @@ from pydantic import ValidationError
 
 from agentpay.core.errors import AuthenticationError, GatewayError, NotFound, ValidationFailed
 from agentpay.core.models import Event, Mandate, PaymentIntent
+from agentpay.core.crypto import sha256_hex
+from agentpay.core.errors import RateLimited
+from agentpay.core.ids import new_id
 from agentpay.gateway import Gateway
+from agentpay.observability.logging import configure as configure_logging, log, request_id
+from agentpay.observability.ratelimit import RateLimiter
 
-log = logging.getLogger("agentpay.api")
+api_log = logging.getLogger("agentpay.api")
 
 
 def _dump(m: Any) -> Any:
@@ -40,9 +46,35 @@ def create_app(gw: Gateway | None = None) -> FastAPI:
     app.state.gw = gw
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+    limiter = RateLimiter(gw.settings.rate_per_s, gw.settings.rate_burst)
+    configure_logging()
+
+    @app.middleware("http")
+    async def _context(request: Request, call_next):
+        rid = request.headers.get("x-request-id") or new_id("req")
+        token = request_id.set(rid[:64])
+        started = time.perf_counter()
+        try:
+            auth = request.headers.get("authorization", "")
+            key = "k:" + sha256_hex(auth)[:16] if auth else "ip:" + (request.client.host if request.client else "?")
+            ok, retry = limiter.take(key)
+            if not ok:
+                err = RateLimited("too many requests")
+                resp = JSONResponse(err.to_dict(), status_code=429, headers={"Retry-After": str(max(1, int(retry + 0.999)))})
+            else:
+                resp = await call_next(request)
+            resp.headers["X-Request-Id"] = rid[:64]
+            log(api_log, logging.INFO, "request", method=request.method, path=request.url.path,
+                status=resp.status_code, ms=round((time.perf_counter() - started) * 1000, 2))
+            return resp
+        finally:
+            request_id.reset(token)
+
     @app.exception_handler(GatewayError)
     async def _gw_error(_: Request, exc: GatewayError):
-        return JSONResponse(exc.to_dict(), status_code=exc.http_status)
+        body = exc.to_dict()
+        body["error"]["request_id"] = request_id.get()
+        return JSONResponse(body, status_code=exc.http_status)
 
     async def admin(request: Request) -> Caller:
         c = await authenticate(gw, request, require_signature=False)
