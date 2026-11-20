@@ -16,8 +16,10 @@ from agentpay.agent.tools import TOOLS, ToolExecutor
 
 SYSTEM = (
     "You are a purchasing agent acting for a user under a cryptographically signed spending mandate. "
-    "Always check the mandate first, search for products, pick the best option that satisfies both the user's "
-    "goal and the mandate, then purchase exactly one item. Never retry a declined payment with a different item "
+    "Always check the mandate first. Prefer negotiating with the merchant via ask_merchant (answer its clarifying "
+    "questions from the user's goal), accept only offers with signature_valid=true, and buy with buy_offer; fall back "
+    "to search_products + purchase when no merchant is connected. Pick the best option that satisfies both the "
+    "user's goal and the mandate, then purchase exactly one item. Never retry a declined payment with a different item "
     "unless the user's goal allows it. Report the payment id and status at the end."
 )
 
@@ -68,6 +70,38 @@ def run_deterministic(goal: str, tools: ToolExecutor, on_event: Callable[[str, d
     res, err = tools("purchase", {"sku": pick["sku"]})
     r = json.loads(res)
     msg = f"Payment {r.get('id')} → {r.get('status')}" if not err else f"Payment failed: {r}"
+    emit("agent_message", {"text": msg})
+    return msg
+
+
+def run_acp_deterministic(goal: str, tools: ToolExecutor, on_event: Callable[[str, dict], None] | None = None,
+                          answers: list[str] | None = None) -> str:
+    """Negotiate with the merchant (answering clarifications), pick the best verified offer, pay, confirm."""
+    emit = on_event or (lambda *_: None)
+    m = json.loads(tools("check_mandate", {})[0])
+    pending = list(answers or [])
+    res, err = tools("ask_merchant", {"message": goal})
+    res = json.loads(res)
+    for _ in range(4):
+        if err or res.get("type") != "clarification":
+            break
+        if not pending:
+            emit("agent_message", {"text": f"Merchant asks: {res['question']} (no answer available)"})
+            return "Needs more information from the user."
+        reply = pending.pop(0)
+        emit("agent_message", {"text": f"Answering merchant: {reply}"})
+        res, err = tools("ask_merchant", {"message": reply})
+        res = json.loads(res)
+    allowed = m["scope"]["merchants_allowed"]
+    offers = [o for o in res.get("offers", []) if o.get("signature_valid") and o["price"] <= min(
+        m["remaining"], m["scope"]["max_amount_per_txn"]) and (not allowed or o["merchant_id"] in allowed)]
+    if not offers:
+        return "No verified offer fits the mandate."
+    pick = max(offers, key=lambda o: o["price"])
+    emit("agent_message", {"text": f"Accepting signed offer {pick['id']}: {pick['name']} at ${pick['price']/100:.2f}"})
+    out = json.loads(tools("buy_offer", {"offer_id": pick["id"]})[0])
+    order = out.get("order")
+    msg = f"Order {order['id']} confirmed, payment {out['payment']['id']}" if order else f"Payment {out.get('payment')}"
     emit("agent_message", {"text": msg})
     return msg
 

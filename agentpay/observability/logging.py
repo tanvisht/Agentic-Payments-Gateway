@@ -25,7 +25,9 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(out, default=str)
 
 
-def configure(level: str = "INFO") -> None:
+def configure(level: str | None = None) -> None:
+    import os
+    level = level or os.environ.get("AGENTPAY_LOG_LEVEL", "INFO")
     root = logging.getLogger("agentpay")
     if any(isinstance(h.formatter, JsonFormatter) for h in root.handlers):
         return

@@ -7,6 +7,7 @@ import json
 from typing import Any, Callable
 
 from agentpay.agent import merchants
+from agentpay.agent.acp_client import AcpError
 from agentpay.agent.client import GatewayClient, GatewayHTTPError
 
 TOOLS: list[dict[str, Any]] = [
@@ -34,6 +35,21 @@ TOOLS: list[dict[str, Any]] = [
         "strict": True,
     },
     {
+        "name": "ask_merchant",
+        "description": "Send a message to the merchant's ACP agent (needs, budget, size). Returns either a "
+                       "clarifying question or signed offers. Only trust offers with signature_valid=true.",
+        "input_schema": {"type": "object", "additionalProperties": False, "required": ["message"],
+                         "properties": {"message": {"type": "string"}}},
+        "strict": True,
+    },
+    {
+        "name": "buy_offer",
+        "description": "Pay for a merchant offer by id under the mandate, then confirm the order with the merchant.",
+        "input_schema": {"type": "object", "additionalProperties": False, "required": ["offer_id"],
+                         "properties": {"offer_id": {"type": "string"}}},
+        "strict": True,
+    },
+    {
         "name": "get_payment",
         "description": "Fetch a payment intent by id.",
         "input_schema": {"type": "object", "additionalProperties": False, "required": ["payment_intent_id"],
@@ -44,8 +60,11 @@ TOOLS: list[dict[str, Any]] = [
 
 
 class ToolExecutor:
-    def __init__(self, client: GatewayClient, mandate_id: str, on_event: Callable[[str, dict], None] | None = None) -> None:
+    def __init__(self, client: GatewayClient, mandate_id: str, on_event: Callable[[str, dict], None] | None = None,
+                 acp=None) -> None:
         self.client, self.mandate_id = client, mandate_id
+        self.acp = acp
+        self._offers: dict[str, dict] = {}
         self.on_event = on_event or (lambda *_: None)
 
     def __call__(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
@@ -56,6 +75,8 @@ class ToolExecutor:
             err = False
         except GatewayHTTPError as exc:
             out, err = exc.body, True
+        except AcpError as exc:
+            out, err = {"error": exc.error}, True
         except (KeyError, ValueError) as exc:
             out, err = {"error": str(exc)}, True
         self.on_event("tool_result", {"name": name, "output": out, "is_error": err})
@@ -76,6 +97,26 @@ class ToolExecutor:
                                             description=p["name"], metadata={"sku": p["sku"]},
                                             idempotency_key=f"buy:{self.mandate_id}:{p['sku']}")
             return {k: pi.get(k) for k in ("id", "status", "amount", "currency", "merchant_id", "provider", "next_action", "last_error")}
+        if name == "ask_merchant":
+            if not self.acp:
+                raise ValueError("no merchant connected")
+            res = self.acp.prompt(a["message"])
+            for o in res.get("offers", []):
+                if o.get("signature_valid"):
+                    self._offers[o["id"]] = o
+            return res
+        if name == "buy_offer":
+            o = self._offers.get(a["offer_id"])
+            if not o:
+                raise ValueError("unknown or unverified offer id")
+            pi = self.client.create_payment(mandate_id=self.mandate_id, amount=o["price"], currency=o["currency"],
+                                            merchant_id=o["merchant_id"], category=o["category"],
+                                            description=o["name"], metadata={"offer_id": o["id"], "sku": o["sku"]},
+                                            idempotency_key=f"offer:{o['id']}")
+            out = {"payment": {k: pi.get(k) for k in ("id", "status", "amount", "currency", "next_action", "last_error")}}
+            if pi["status"] in ("succeeded", "requires_capture"):
+                out["order"] = self.acp.confirm(o["id"], pi["id"])["order"]
+            return out
         if name == "get_payment":
             return self.client.get_payment(a["payment_intent_id"])
         raise ValueError(f"unknown tool {name}")
