@@ -27,6 +27,9 @@
 10. [Ledger and reconciliation](#10-ledger-and-reconciliation)
 11. [Reliability: idempotency, retries, crash recovery](#11-reliability-idempotency-retries-crash-recovery)
 12. [The agent side](#12-the-agent-side)
+    - [ACP merchant protocol](#acp-merchant-protocol)
+    - [Verifiable receipts](#verifiable-receipts)
+    - [Storage, observability, limits](#storage-observability-limits)
 13. [API reference](#13-api-reference)
 14. [Running it](#14-running-it)
 15. [Testing strategy](#15-testing-strategy)
@@ -329,6 +332,54 @@ flowchart TB
 - `agentpay/agent/tools.py` defines strict JSON-schema tools; the model can't pass a raw amount, only a SKU whose price comes from the catalog.
 - `agentpay/agent/runner.py` runs a manual Messages API tool loop (`claude-opus-5-5` by default, override with `AGENTPAY_AGENT_MODEL`). Without `ANTHROPIC_API_KEY` it uses a deterministic planner that exercises the **identical** gateway path, which is how CI and offline demos run.
 
+### ACP merchant protocol
+
+Merchants speak the Agentic Commerce Protocol over JSON-RPC 2.0 at `/acp/rpc` (discovery card at `/acp/.well-known/merchant`).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Buyer agent
+    participant M as ACP merchant
+    participant G as AgentPay gateway
+    B->>M: initialize  →  merchantKey, capabilities
+    B->>M: session/new {buyerId}
+    B->>M: session/prompt "running shoes"
+    M-->>B: clarification: budget? size?
+    B->>M: session/prompt "under $160, size 10"
+    M-->>B: offers[] (Ed25519-signed, price-locked, 10-min expiry)
+    B->>B: verify offer signature with merchantKey
+    B->>G: signed POST /v1/payment_intents (amount = offer price)
+    G-->>B: succeeded
+    B->>M: commerce/pay {offerId, paymentIntentId}
+    M->>G: verify intent (status, amount, currency, merchant), single use
+    M-->>B: order confirmed
+```
+
+| Method | Purpose |
+|---|---|
+| `initialize` | Protocol version, merchant public key, capabilities |
+| `session/new` `session/load` `session/close` | Persistent buyer sessions (stored in the gateway DB, not process memory) |
+| `session/prompt` | Natural-language need → clarification question or signed offers |
+| `catalog/search` | Structured search (query, max price, category, size) |
+| `commerce/offer` | Signed offer for a specific SKU/size |
+| `commerce/pay` | Bind a verified gateway payment to an offer → order (idempotent; a payment can back only one order) |
+| `order/get` | Order status |
+
+The buyer agent's LLM tools are `ask_merchant` and `buy_offer`; it can only buy offers whose merchant signature verified, at the signed price.
+
+### Verifiable receipts
+
+`GET /v1/payment_intents/{id}/receipt` returns a gateway-signed `agentpay.receipt.v1` document binding the **mandate hash**, intent, processor reference, captured/refunded amounts, risk decision and **ledger journal**. `?format=pdf` renders it. The gateway public key is published at `/.well-known/agentpay`, so expense tools and auditors can verify receipts offline.
+
+### Storage, observability, limits
+
+- **Backends:** `AGENTPAY_DB_PATH` takes `:memory:`, a file path, `sqlite:///…` or `postgresql://…`. All SQL lives in one backend-neutral `Store` with small dialect hooks. **The full test suite runs on both SQLite and Postgres** (CI job on `postgres:16`).
+- **Concurrency:** 20 threads racing one mandate never overspend. Rows are read under the store lock (this fixed a real cross-thread cursor race found by the suite).
+- **Request IDs:** `X-Request-Id` is accepted or generated, echoed on every response and included in error bodies and JSON logs (secrets redacted).
+- **Rate limiting:** a token bucket per credential (or IP) returns `429` with `Retry-After`.
+- **Card onboarding:** `POST /v1/principals/{id}/payment_method_setup` creates a provider customer and an off-session SetupIntent. Only the `client_secret` goes to the principal's browser, and `/complete` stores the confirmed payment method.
+
 ## 13. API reference
 
 | Method & path | Auth | Purpose |
@@ -350,6 +401,10 @@ flowchart TB
 | `POST /v1/payment_intents/{id}/approve` | principal signature | Approve a risk-escalated payment |
 | `POST /v1/providers/{name}/webhook` | provider signature | Inbound processor webhooks |
 | `POST /v1/webhook_endpoints` | admin | Subscribe to signed outbound events |
+| `POST /v1/principals/{id}/payment_method_setup[/complete]` | admin | Save a card via provider SetupIntent |
+| `GET /v1/payment_intents/{id}/receipt[?format=pdf]` | admin / owning agent | Gateway-signed receipt |
+| `GET /.well-known/agentpay` | none | Gateway public key + discovery |
+| `POST /acp/rpc` | none (merchant protocol) | ACP JSON-RPC merchant |
 | `GET /v1/events`, `/v1/events/stream` | admin | Event log, live SSE stream |
 | `GET /v1/ledger/trial_balance`, `/balance` | admin | Accounting |
 
@@ -369,7 +424,7 @@ agentpay demo "Buy running shoes under \$150"
 AGENTPAY_ADMIN_KEY=dev-admin agentpay serve --port 8080
 ```
 
-Stripe test mode:
+Stripe test mode (also enables the live sandbox test suite):
 
 ```bash
 export AGENTPAY_PROVIDERS=stripe,mock AGENTPAY_DEFAULT_PROVIDER=stripe STRIPE_SECRET_KEY=sk_test_... STRIPE_WEBHOOK_SECRET=whsec_...
@@ -377,6 +432,16 @@ export AGENTPAY_PROVIDERS=stripe,mock AGENTPAY_DEFAULT_PROVIDER=stripe STRIPE_SE
 
 ```bash
 stripe listen --forward-to localhost:8080/v1/providers/stripe/webhook
+```
+
+```bash
+python scripts/stripe_sandbox_e2e.py
+```
+
+Postgres:
+
+```bash
+AGENTPAY_DB_PATH=postgresql://user:pass@localhost/agentpay agentpay serve
 ```
 
 Docker:
@@ -422,7 +487,10 @@ tests/             pytest suite
 ## 17. Roadmap
 
 - [x] Mandate-bound, signed agent payments with Stripe + failover
-- [ ] Postgres store with row-level locking; horizontal scale
+- [x] Postgres backend (full suite green on SQLite and Postgres)
+- [x] ACP merchant protocol with signed offers and verified orders
+- [x] Gateway-signed receipts (JSON + PDF)
+- [ ] Row-level locking + connection pool for multi-replica deployments
 - [ ] x402 / USDC stablecoin provider and on-chain escrow adapter
 - [ ] Stripe Connect payouts to merchant accounts
 - [ ] Agentic Commerce Protocol (ACP) checkout endpoint compatibility
