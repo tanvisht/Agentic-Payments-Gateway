@@ -18,6 +18,19 @@ from pydantic import BaseModel
 T = TypeVar("T", bound=BaseModel)
 
 
+class Rows:
+    __slots__ = ("_rows",)
+
+    def __init__(self, rows: list) -> None:
+        self._rows = rows
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return list(self._rows)
+
+
 class Store(ABC):
     dialect: str = "abstract"
 
@@ -66,9 +79,12 @@ class Store(ABC):
                 if outer:
                     self._commit()
 
-    def execute(self, sql: str, params: tuple = ()) -> Any:
+    def execute(self, sql: str, params: tuple = ()) -> "Rows":
+        # Rows are materialized *inside* the lock: handing out a live cursor on
+        # a shared connection lets another thread clobber it before fetch.
         with self._lock:
-            return self._raw_execute(sql, params)
+            cur = self._raw_execute(sql, params)
+            return Rows(cur.fetchall() if getattr(cur, "description", None) else [])
 
     def executemany(self, sql: str, rows: list[tuple]) -> None:
         with self.tx():

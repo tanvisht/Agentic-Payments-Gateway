@@ -11,17 +11,6 @@ from __future__ import annotations
 from agentpay.storage.base import SCHEMA, Store
 
 
-class _Cursor:
-    def __init__(self, cur):
-        self._cur = cur
-
-    def fetchone(self):
-        return self._cur.fetchone() if self._cur.description else None
-
-    def fetchall(self):
-        return self._cur.fetchall() if self._cur.description else []
-
-
 class PostgresStore(Store):
     dialect = "postgres"
 
@@ -36,7 +25,7 @@ class PostgresStore(Store):
                 self._conn.execute(stmt)
 
     def _raw_execute(self, sql, params):
-        return _Cursor(self._conn.execute(sql.replace("?", "%s"), params))
+        return self._conn.execute(sql.replace("?", "%s"), params)
 
     def _begin(self):
         self._conn.execute("BEGIN ISOLATION LEVEL SERIALIZABLE")

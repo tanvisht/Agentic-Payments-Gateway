@@ -8,6 +8,7 @@ requires_action) or `deny`.
 
 from __future__ import annotations
 
+import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -41,8 +42,13 @@ class RiskEngine:
         self.cfg = config or RiskConfig()
         self.clock = clock
         self._recent: dict[str, deque] = defaultdict(deque)  # agent -> (ts, merchant, amount)
+        self._lock = threading.Lock()
 
     def assess(self, *, agent_id: str, mandate: Mandate, amount: int, merchant_id: str) -> RiskDecision:
+        with self._lock:
+            return self._assess(agent_id, mandate, amount, merchant_id)
+
+    def _assess(self, agent_id: str, mandate: Mandate, amount: int, merchant_id: str) -> RiskDecision:
         t = self.clock()
         q = self._recent[agent_id]
         while q and t - q[0][0] > max(self.cfg.velocity_window_s, self.cfg.duplicate_window_s):
@@ -79,3 +85,18 @@ class RiskEngine:
         if decision != "deny":
             q.append((t, merchant_id, amount))
         return RiskDecision(decision, min(score, 100), reasons)
+
+    def forget(self, *, agent_id: str, merchant_id: str, amount: int) -> None:
+        """A payment that failed never moved money: drop it from velocity/duplicate memory
+        so a legitimate retry isn't flagged as a duplicate of its own decline."""
+        with self._lock:
+            self._forget(agent_id, merchant_id, amount)
+
+    def _forget(self, agent_id: str, merchant_id: str, amount: int) -> None:
+        q = self._recent.get(agent_id)
+        if not q:
+            return
+        for i in range(len(q) - 1, -1, -1):
+            if q[i][1] == merchant_id and q[i][2] == amount:
+                del q[i]
+                return

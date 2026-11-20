@@ -71,7 +71,10 @@ class PaymentService:
             raise ValidationFailed("amount must be an integer in minor units")
         if not merchant_id or len(merchant_id) > 200:
             raise ValidationFailed("merchant_id is required")
-        currency = normalize_currency(currency)
+        try:
+            currency = normalize_currency(currency)
+        except ValueError as exc:
+            raise ValidationFailed(str(exc)) from None
         principal = self.store.get("principal", agent.principal_id, Principal)
         pm = payment_method or (principal.default_payment_method if principal else None)
         if not pm:
@@ -131,6 +134,7 @@ class PaymentService:
         pi.attempts.extend(exc.details.get("attempts", []) if isinstance(exc.details, dict) else [])
         pi.last_error = {"code": exc.code, "message": exc.message,
                          **({"decline_code": exc.decline_code} if getattr(exc, "decline_code", None) else {})}
+        self.risk.forget(agent_id=pi.agent_id, merchant_id=pi.merchant_id, amount=pi.amount)
         with self.store.tx():
             transition(pi, S.FAILED)
             self.mandates.release(pi.mandate_id, pi.amount)
