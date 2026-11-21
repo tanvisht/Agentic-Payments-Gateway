@@ -283,6 +283,30 @@ def create_app(gw: Gateway | None = None, *, merchant=None) -> FastAPI:
         pi = gw.payments.apply_webhook(update) if update else None
         return {"received": True, "payment_intent": pi.id if pi else None}
 
+    # -- identity & reputation ---------------------------------------------
+    from agentpay.trust.registry import AgentCard, Feedback
+
+    @app.post("/v1/registry/agents", status_code=201)
+    async def register_card(request: Request):
+        await admin(request)
+        card = await parse(AgentCard, request)
+        gw.get_agent(card.id)
+        return _dump(gw.registry.register_card(card))
+
+    @app.get("/v1/registry/agents/{agent_id}")
+    async def get_card(agent_id: str):
+        return {"card": _dump(gw.registry.card(agent_id)), "reputation": gw.registry.reputation(agent_id)}
+
+    @app.post("/v1/registry/merchants", status_code=201)
+    async def register_merchant(body: sc.MerchantIn, request: Request):
+        await admin(request)
+        return _dump(gw.registry.register_merchant(body.merchant_id, body.public_key, body.display_name))
+
+    @app.post("/v1/registry/feedback", status_code=201)
+    async def feedback(request: Request):
+        fb = await parse(Feedback, request)  # the merchant signature is the credential
+        return _dump(gw.registry.submit_feedback(fb))
+
     # -- operator ---------------------------------------------------------
     @app.post("/v1/webhook_endpoints", status_code=201)
     async def add_endpoint(body: sc.WebhookEndpointIn, request: Request):

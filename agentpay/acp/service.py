@@ -206,7 +206,22 @@ class MerchantService:
             s.history.append({"role": "merchant", "type": "order", "order_id": order.id, "at": now()})
             self._save(s)
         self.gw.events.emit("acp.order.confirmed", {"order": order.model_dump()})
+        self._rate_buyer(pi, order)
         return {"order": order.model_dump(), "replayed": False}
+
+    def _rate_buyer(self, pi: PaymentIntent, order: Order) -> None:
+        """Leave signed feedback for the buyer agent if this merchant is registered."""
+        from agentpay.trust.registry import Feedback, MerchantIdentity
+        ident = self.gw.store.get("merchant_identity", pi.merchant_id, MerchantIdentity)
+        if not ident or ident.public_key != self.public_key or self.gw.registry is None:
+            return
+        fb = Feedback(subject_agent_id=pi.agent_id, merchant_id=pi.merchant_id, payment_intent_id=pi.id,
+                      score=95, tags=["paid_on_time", "acp"], signature="")
+        fb.signature = self.key.sign(fb.payload())
+        try:
+            self.gw.registry.submit_feedback(fb)
+        except GatewayError:
+            pass
 
     def order(self, order_id: str) -> dict:
         o = self.gw.store.get("acp_order", order_id, Order)

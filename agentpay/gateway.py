@@ -17,6 +17,7 @@ from agentpay.providers.mock import MockProvider
 from agentpay.providers.router import ProviderRouter
 from agentpay.risk.engine import RiskEngine
 from agentpay.storage import Store, open_store
+from agentpay.trust.registry import Registry
 from agentpay.webhooks.dispatcher import EventBus
 
 
@@ -55,6 +56,7 @@ class Gateway:
     payments: PaymentService
     idempotency: Idempotency
     signing_key: crypto.KeyPair | None = None
+    registry: "Registry | None" = None
 
     @classmethod
     def build(cls, settings: Settings | None = None, *, providers: list[PaymentProvider] | None = None,
@@ -68,7 +70,10 @@ class Gateway:
         default = s.default_provider if s.default_provider in router.providers else None
         payments = PaymentService(st, router, mandates, ledger, rk, ev, default_provider=default)
         key = crypto.KeyPair.from_private_b64(s.signing_key) if s.signing_key else crypto.KeyPair.generate()
-        return cls(s, st, router, mandates, ledger, rk, ev, payments, Idempotency(st), key)
+        registry = Registry(st)
+        if rk.reputation is None:
+            rk.reputation = registry.reputation
+        return cls(s, st, router, mandates, ledger, rk, ev, payments, Idempotency(st), key, registry)
 
     def receipt(self, intent_id: str) -> dict:
         from agentpay.core import receipts

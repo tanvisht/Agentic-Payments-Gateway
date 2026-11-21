@@ -35,11 +35,15 @@ class RiskConfig:
     deny_score: int = 80
     review_score: int = 40
     blocked_merchants: frozenset[str] = frozenset()
+    reputation_review_below: float = 45.0
+    reputation_deny_below: float = 25.0
+    reputation_min_reviews: int = 3
 
 
 class RiskEngine:
-    def __init__(self, config: RiskConfig | None = None, clock=time.time) -> None:
+    def __init__(self, config: RiskConfig | None = None, clock=time.time, reputation=None) -> None:
         self.cfg = config or RiskConfig()
+        self.reputation = reputation  # callable(agent_id) -> {"score", "count"} | None
         self.clock = clock
         self._recent: dict[str, deque] = defaultdict(deque)  # agent -> (ts, merchant, amount)
         self._lock = threading.Lock()
@@ -76,6 +80,16 @@ class RiskEngine:
         if mandate.scope.max_total_amount and (mandate.spent_amount + mandate.reserved_amount + amount) / mandate.scope.max_total_amount > 0.95:
             score += 10
             reasons.append("mandate_nearly_exhausted")
+
+        if self.reputation is not None:
+            rep = self.reputation(agent_id)
+            if rep and rep["count"] >= self.cfg.reputation_min_reviews:
+                if rep["score"] < self.cfg.reputation_deny_below:
+                    score += 80
+                    reasons.append(f"low_reputation:{rep['score']}")
+                elif rep["score"] < self.cfg.reputation_review_below:
+                    score += 40
+                    reasons.append(f"weak_reputation:{rep['score']}")
 
         if mandate.scope.requires_human_above is not None and amount > mandate.scope.requires_human_above:
             score = max(score, self.cfg.review_score)

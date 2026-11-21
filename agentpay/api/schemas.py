@@ -70,3 +70,9 @@ class RetryIn(BaseModel):
 class WebhookEndpointIn(BaseModel):
     url: str
     events: list[str] | None = None
+
+
+class MerchantIn(BaseModel):
+    merchant_id: str = Field(min_length=1, max_length=200)
+    public_key: str
+    display_name: str = ""
