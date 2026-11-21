@@ -17,10 +17,34 @@ jobs:
       - run: pytest
       - run: agentpay demo
 
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm i --prefix /tmp/solc solc@0.8.28
+      - run: SOLC_PATH=/tmp/solc/node_modules/solc node contracts/build.mjs
+      - name: Artifacts are reproducible from source
+        run: git diff --exit-code contracts/artifacts
+
   postgres:
     runs-on: ubuntu-latest
     services:
-      postgres:
+      contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm i --prefix /tmp/solc solc@0.8.28
+      - run: SOLC_PATH=/tmp/solc/node_modules/solc node contracts/build.mjs
+      - name: Artifacts are reproducible from source
+        run: git diff --exit-code contracts/artifacts
+
+  postgres:
         image: postgres:16
         env:
           POSTGRES_PASSWORD: postgres

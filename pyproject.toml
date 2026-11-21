@@ -20,8 +20,9 @@ dependencies = [
 [project.optional-dependencies]
 agent = ["anthropic>=0.40"]
 postgres = ["psycopg[binary]>=3.1"]
-receipts = ["fpdf2>=2.7"]
-dev = ["pytest>=8", "pytest-asyncio>=0.23", "fpdf2>=2.7"]
+receipts = ["fpdf2>=2.7", "hypothesis>=6", "web3>=7", "eth-tester[py-evm]>=0.12"]
+chain = ["web3>=7", "eth-tester[py-evm]>=0.12", "eth-account>=0.13"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "fpdf2>=2.7", "hypothesis>=6", "web3>=7", "eth-tester[py-evm]>=0.12"]
 
 [project.scripts]
 agentpay = "agentpay.cli:main"
