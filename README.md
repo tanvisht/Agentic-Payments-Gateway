@@ -30,6 +30,9 @@
     - [ACP merchant protocol](#acp-merchant-protocol)
     - [Verifiable receipts](#verifiable-receipts)
     - [Storage, observability, limits](#storage-observability-limits)
+    - [Payment rails: cards, on-chain escrow, x402 stablecoins](#payment-rails-cards-on-chain-escrow-x402-stablecoins)
+    - [Agent identity and reputation](#agent-identity-and-reputation)
+    - [Audit trail and LLM cost](#audit-trail-and-llm-cost)
 13. [API reference](#13-api-reference)
 14. [Running it](#14-running-it)
 15. [Testing strategy](#15-testing-strategy)
@@ -380,6 +383,39 @@ The buyer agent's LLM tools are `ask_merchant` and `buy_offer`; it can only buy 
 - **Rate limiting:** a token bucket per credential (or IP) returns `429` with `Retry-After`.
 - **Card onboarding:** `POST /v1/principals/{id}/payment_method_setup` creates a provider customer and an off-session SetupIntent. Only the `client_secret` goes to the principal's browser, and `/complete` stores the confirmed payment method.
 
+### Payment rails: cards, on-chain escrow, x402 stablecoins
+
+Every rail sits behind the same `PaymentProvider` interface, so **mandates, risk, idempotency, ledger, receipts and audit apply identically** whichever way the money moves.
+
+| Rail | `payment_method` | authorize | capture | cancel | Settlement |
+|---|---|---|---|---|---|
+| **Stripe** (cards) | `pm_…` (saved via SetupIntent) | PaymentIntent (manual capture) | full / partial | void | Stripe payouts |
+| **Escrow** (on-chain, ERC-20 / USDC) | `escrow:<payer address>` | `AgentEscrow.lock` | `release(amount)` (remainder back to payer) | `refund` | merchant address |
+| **x402** (USDC, HTTP 402) | `x402:<X-PAYMENT payload>` | verify + settle EIP-3009 authorization | push-settled | n/a | facilitator |
+
+**AgentEscrow.sol** (`contracts/src`): no admin keys, no upgrade path, reentrancy guard, checks-effects-interactions, return-value-safe ERC-20 calls. **After the deadline anyone can refund**, so funds can never be stranded if the gateway disappears. Artifacts are built with solc 0.8.28 (`node contracts/build.mjs`), and CI checks they reproduce from source. The tests run the **real compiled bytecode on an in-process EVM** (py-evm via eth-tester).
+
+**x402**: a `402 Payment Required` challenge returns `accepts[]` requirements. The client signs an EIP-712 `TransferWithAuthorization` (EIP-3009) and retries with an `X-PAYMENT` header. The facilitator checks payee, exact amount, network, validity window, signer and single-use nonce, then settles. A merchant paywall router and a gateway provider are both included. If the agent's wallet signs a different amount than the payment intent, it's a decline.
+
+### Agent identity and reputation
+
+Modeled on ERC-8004's identity and reputation registries:
+
+- **Agent cards** (name, endpoint, capabilities, agent key) must be **signed by the owning principal**. They're public at `GET /v1/registry/agents/{id}`.
+- **Feedback** is merchant-signed and accepted **only for a settled payment between exactly that agent and that merchant**, one review per payment. No payment, no review, so fake reviews are structurally impossible.
+- **Score** is a Bayesian average (prior 70, weight 5), so one review can't sink or inflate a new agent. The **risk engine** escalates to the human below 45 and declines below 25 once an agent has 3+ reviews.
+- The ACP merchant leaves signed feedback automatically after each confirmed order.
+
+### Audit trail and LLM cost
+
+`GET /v1/mandates/{id}/audit` answers "what did I authorize, and what did my agent actually do?":
+
+- **manifest**: the signed scope, window and purpose
+- **activity**: every attempt in order, **including ones that never became payments** (mandate violations, risk declines)
+- **summary**: outcomes, denials by rule, spend, remaining budget, merchants touched
+- **compliance**: each settled payment re-checked against the signed scope
+- **llm_cost**: tokens and dollars the agent's reasoning cost under this mandate (`POST /v1/agents/me/usage`, reported automatically by the Claude runner, priced in integer micro-dollars)
+
 ## 13. API reference
 
 | Method & path | Auth | Purpose |
@@ -405,6 +441,10 @@ The buyer agent's LLM tools are `ask_merchant` and `buy_offer`; it can only buy 
 | `GET /v1/payment_intents/{id}/receipt[?format=pdf]` | admin / owning agent | Gateway-signed receipt |
 | `GET /.well-known/agentpay` | none | Gateway public key + discovery |
 | `POST /acp/rpc` | none (merchant protocol) | ACP JSON-RPC merchant |
+| `GET /v1/mandates/{id}/audit` | admin / owning agent | Manifest, activity, compliance, LLM cost |
+| `POST /v1/agents/me/usage` · `GET /v1/agents/{id}/usage` | agent (signed) / admin | LLM token + cost tracking |
+| `POST /v1/registry/agents` · `GET /v1/registry/agents/{id}` | admin / public | Principal-signed agent cards + reputation |
+| `POST /v1/registry/merchants` · `POST /v1/registry/feedback` | admin / merchant signature | Merchant keys, payment-bound feedback |
 | `GET /v1/events`, `/v1/events/stream` | admin | Event log, live SSE stream |
 | `GET /v1/ledger/trial_balance`, `/balance` | admin | Accounting |
 
@@ -464,7 +504,11 @@ pytest
 | Payments | Auto & manual capture, partial capture, multi-refund to zero, cancel/void, decline → release → retry, 3DS → sync, idempotent replay & conflict, overspend |
 | Providers | Failover vs hard decline, all-down, circuit breaker open/half-open, Stripe param mapping, error translation, live-key guard, webhook signatures |
 | Accounting | Unbalanced/invalid postings rejected, transaction rollback, trial balance = 0 after every flow |
-| Agent | Deterministic agent buys within mandate; disallowed purchase surfaces as tool error |
+| Agent | Deterministic agent buys within mandate; disallowed purchase surfaces as tool error; ACP negotiation; forged offers refused |
+| Properties (Hypothesis) | Random op sequences preserve zero trial balance, mandate budget, net-captured == spent, reservations, refund ≤ capture ≤ amount |
+| On-chain | Real AgentEscrow bytecode on py-evm: partial release, deadline refunds, auth rules, gateway flow |
+| x402 | 402 challenge, settle, replay, tampered amount/payee/network/signature, expiry, unfunded wallet |
+| Trust & audit | Principal-signed cards, payment-bound feedback, reputation → risk, audit with denials, LLM cost |
 
 ## 16. Repository layout
 
@@ -478,10 +522,16 @@ agentpay/
 ├── webhooks/      outbound signing + delivery, event bus
 ├── storage/       SQLite document store (swap for Postgres)
 ├── api/           FastAPI app, auth, schemas
-├── agent/         signed client SDK, LLM tools, Claude runner, demo
+├── agent/         signed client SDK, ACP buyer client, LLM tools, Claude runner, demo
+├── acp/           ACP merchant: JSON-RPC, catalog, clarification, signed offers, orders
+├── chain/         EVM client (web3 / in-process py-evm)
+├── x402/          402 protocol, EIP-3009 signing, facilitator, paywall
+├── trust/         agent identity + reputation registry
+├── observability/ JSON logging, request ids, rate limiting
 ├── gateway.py     composition root
 └── cli.py         `agentpay serve | demo`
-tests/             pytest suite
+contracts/         AgentEscrow.sol, TestUSDC.sol, build script, compiled artifacts
+tests/             pytest suite (SQLite + Postgres, EVM, property-based)
 ```
 
 ## 17. Roadmap
@@ -490,8 +540,10 @@ tests/             pytest suite
 - [x] Postgres backend (full suite green on SQLite and Postgres)
 - [x] ACP merchant protocol with signed offers and verified orders
 - [x] Gateway-signed receipts (JSON + PDF)
+- [x] On-chain escrow rail (Solidity) and x402 / USDC stablecoin rail
+- [x] Agent identity + reputation registry feeding risk
+- [x] Per-mandate audit trail and LLM cost tracking
 - [ ] Row-level locking + connection pool for multi-replica deployments
-- [ ] x402 / USDC stablecoin provider and on-chain escrow adapter
 - [ ] Stripe Connect payouts to merchant accounts
 - [ ] Agentic Commerce Protocol (ACP) checkout endpoint compatibility
 - [ ] Premium web frontend with live transaction visualizer and demo video
