@@ -125,3 +125,15 @@ def test_no_matching_products(rpc):
     sid = rpc("session/new", buyerId="b")["result"]["sessionId"]
     r = rpc("session/prompt", sessionId=sid, text="running shoes under $5 size 10")["result"]
     assert r["type"] == "offers" and r["offers"] == []
+
+
+@pytest.mark.parametrize("text,cat,skus", [
+    ("noise cancelling headphones under $400", "electronics", {"sa-anc-h900"}),
+    ("a usb-c charger under $50", "accessories", {"vg-usbc-65w"}),
+    ("wireless earbuds, budget $250", "electronics", {"sa-buds-pro"}),
+])
+def test_electronics_catalog(rpc, text, cat, skus):
+    sid = rpc("session/new", buyerId="b")["result"]["sessionId"]
+    r = rpc("session/prompt", sessionId=sid, text=text)["result"]
+    assert r["type"] == "offers" and r["requirements"]["category"] == cat  # no size needed for electronics
+    assert skus <= {o["sku"] for o in r["offers"]}

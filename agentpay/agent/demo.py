@@ -21,8 +21,8 @@ def bootstrap(gw: Gateway, *, per_txn: int = 20000, total: int = 50000, merchant
     principal = gw.create_principal("Demo Principal", principal_kp.public_b64, default_payment_method="pm_card_visa")
     agent, api_key = gw.create_agent(principal.id, "shopping-agent", agent_kp.public_b64)
     scope = MandateScope(currency="USD", max_amount_per_txn=per_txn, max_total_amount=total,
-                         merchants_allowed=merchants if merchants is not None else ["nike.com", "hoka.com", "adidas.com", "stride.run", "trailhead.co"],
-                         categories_allowed=["running", "apparel"])
+                         merchants_allowed=merchants if merchants is not None else ["nike.com", "hoka.com", "adidas.com", "stride.run", "trailhead.co", "voltgear.shop", "sonicaudio.store"],
+                         categories_allowed=["running", "apparel", "electronics", "accessories"])
     nb, exp, nonce = int(time.time()) - 5, int(time.time()) + 7 * 86400, secrets.token_hex(12)
     sig = principal_kp.sign(mandate_signing_payload(principal_id=principal.id, agent_id=agent.id, scope=scope,
                                                     nonce=nonce, not_before=nb, expires_at=exp))
@@ -45,7 +45,7 @@ def run_demo(goal: str) -> None:
     os.environ.setdefault("AGENTPAY_LOG_LEVEL", "WARNING")
     gw = Gateway.build(Settings(admin_key="demo", async_webhooks=False))
     app = create_app(gw)
-    principal, _, agent, agent_kp, api_key, mandate = bootstrap(gw)
+    principal, _, agent, agent_kp, api_key, mandate = bootstrap(gw, per_txn=50000, total=150000)
     client = in_process_client(app, api_key, agent_kp)
 
     def log(kind: str, data: dict) -> None:

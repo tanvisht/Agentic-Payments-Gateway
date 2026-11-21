@@ -12,6 +12,8 @@ import re
 from typing import Any
 
 CATEGORIES = {
+    "accessories": ("charger", "cable", "case", "adapter", "stand", "accessory", "accessories"),
+    "electronics": ("phone", "smartphone", "laptop", "tablet", "headphones", "earbuds", "speaker", "electronics"),
     "running": ("running", "run", "marathon", "jog", "road"),
     "trail": ("trail", "hike", "hiking"),
     "basketball": ("basketball", "court", "hoop"),
