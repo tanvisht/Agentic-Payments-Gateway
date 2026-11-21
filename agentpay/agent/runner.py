@@ -36,6 +36,12 @@ def run_with_claude(goal: str, tools: ToolExecutor, *, model: str | None = None,
         resp = client.messages.create(model=model, max_tokens=16000, system=SYSTEM, tools=TOOLS,
                                       output_config={"effort": "medium"}, messages=messages)
         messages.append({"role": "assistant", "content": resp.content})
+        try:  # LLM cost is part of the audit trail for the mandate
+            tools.client.request("POST", "/v1/agents/me/usage", {
+                "model": model, "input_tokens": resp.usage.input_tokens, "output_tokens": resp.usage.output_tokens,
+                "mandate_id": tools.mandate_id, "session": "claude-runner"})
+        except Exception:  # noqa: BLE001 - never block a purchase on telemetry
+            pass
         for b in resp.content:
             if b.type == "text" and b.text.strip():
                 emit("agent_message", {"text": b.text})

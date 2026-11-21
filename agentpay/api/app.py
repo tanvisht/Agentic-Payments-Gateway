@@ -183,6 +183,33 @@ def create_app(gw: Gateway | None = None, *, merchant=None) -> FastAPI:
             ms = gw.store.list("mandate", Mandate)
         return {"data": [{**_dump(m), "remaining": m.remaining()} for m in ms]}
 
+    @app.get("/v1/mandates/{mandate_id}/audit")
+    async def mandate_audit(mandate_id: str, request: Request):
+        caller = await authenticate(gw, request, require_signature=False)
+        m = gw.mandates.get(mandate_id)
+        if caller.kind == "agent" and m.agent_id != caller.agent.id:  # type: ignore[union-attr]
+            raise NotFound(f"mandate {mandate_id} not found")
+        return gw.payments.audit.report(m)
+
+    @app.post("/v1/agents/me/usage", status_code=201)
+    async def report_usage(request: Request):
+        caller = await authenticate(gw, request, require_signature=True)
+        if caller.kind != "agent":
+            raise AuthenticationError("usage is reported by agents")
+        body = await parse(sc.UsageIn, request)
+        if body.mandate_id and gw.mandates.get(body.mandate_id).agent_id != caller.agent.id:  # type: ignore[union-attr]
+            raise NotFound("mandate not found")
+        from agentpay.core.audit import UsageRecord
+        u = gw.payments.audit.record_usage(UsageRecord(agent_id=caller.agent.id, **body.model_dump()))  # type: ignore[union-attr]
+        return _dump(u)
+
+    @app.get("/v1/agents/{agent_id}/usage")
+    async def usage(agent_id: str, request: Request):
+        caller = await authenticate(gw, request, require_signature=False)
+        if caller.kind == "agent" and caller.agent.id != agent_id:  # type: ignore[union-attr]
+            raise NotFound("agent not found")
+        return gw.payments.audit.usage_summary(agent_id)
+
     @app.post("/v1/mandates/{mandate_id}/revoke")
     async def revoke_mandate(mandate_id: str, request: Request):
         await admin(request)

@@ -76,3 +76,11 @@ class MerchantIn(BaseModel):
     merchant_id: str = Field(min_length=1, max_length=200)
     public_key: str
     display_name: str = ""
+
+
+class UsageIn(BaseModel):
+    model: str = Field(min_length=1, max_length=100)
+    input_tokens: int = Field(ge=0, le=10**9)
+    output_tokens: int = Field(ge=0, le=10**9)
+    mandate_id: str | None = None
+    session: str = Field(default="", max_length=200)

@@ -41,6 +41,8 @@ class PaymentService:
         self.store, self.router, self.mandates = store, router, mandates
         self.ledger, self.risk, self.events = ledger, risk, events
         self.default_provider = default_provider
+        from agentpay.core.audit import AuditLog
+        self.audit = AuditLog(store)
 
     # -- persistence ----------------------------------------------------
     def get(self, intent_id: str) -> PaymentIntent:
@@ -53,6 +55,9 @@ class PaymentService:
         self.store.put("payment_intent", pi, k1=pi.agent_id)
 
     def _emit(self, pi: PaymentIntent, type_: str, **extra: Any) -> None:
+        self.audit.record(pi.mandate_id, type_, payment_intent=pi.id, status=pi.status.value, amount=pi.amount,
+                          merchant_id=pi.merchant_id, provider=pi.provider,
+                          **({"error": pi.last_error} if pi.last_error else {}))
         self.events.emit(type_, {"payment_intent": pi.model_dump(mode="json"), **extra})
 
     def list_for_agent(self, agent_id: str, limit: int = 50) -> list[PaymentIntent]:
@@ -81,21 +86,39 @@ class PaymentService:
             raise ValidationFailed("no payment_method supplied and principal has no default")
         provider = provider or self.default_provider
 
-        with self.store.tx():
-            mandate = self.mandates.get(mandate_id)
-            self.mandates.check(mandate, agent_id=agent.id, amount=amount, currency=currency,
-                                merchant_id=merchant_id, category=category)
-            decision = self.risk.assess(agent_id=agent.id, mandate=mandate, amount=amount, merchant_id=merchant_id)
-            if decision.decision == "deny":
-                self.events.emit("risk.declined", {"agent_id": agent.id, "mandate_id": mandate.id, "amount": amount,
-                                                   "merchant_id": merchant_id, "risk": decision.to_dict()})
-                raise RiskDeclined("payment declined by risk engine", details=decision.to_dict())
-            self.mandates.reserve(mandate.id, amount)
-            pi = PaymentIntent(agent_id=agent.id, principal_id=agent.principal_id, mandate_id=mandate.id,
-                               amount=amount, currency=currency, merchant_id=merchant_id, category=category,
-                               description=description, payment_method=pm, capture_method=capture_method,
-                               provider=provider, risk=decision.to_dict(), metadata=metadata or {})
-            self._save(pi)
+        attempt = {"agent_id": agent.id, "amount": amount, "currency": currency, "merchant_id": merchant_id,
+                   "category": category, "description": description[:200]}
+        mandate = self.mandates.get(mandate_id)
+        if mandate.agent_id == agent.id:
+            self.audit.record(mandate.id, "payment.attempt", **attempt)
+        denied: tuple[str, dict] | None = None
+        try:
+            with self.store.tx():
+                mandate = self.mandates.get(mandate_id)
+                try:
+                    self.mandates.check(mandate, agent_id=agent.id, amount=amount, currency=currency,
+                                        merchant_id=merchant_id, category=category)
+                except MandateViolation as exc:
+                    denied = ("mandate.violation", {"rule": exc.details.get("rule"), "reason": exc.message})
+                    raise
+                decision = self.risk.assess(agent_id=agent.id, mandate=mandate, amount=amount, merchant_id=merchant_id)
+                if decision.decision == "deny":
+                    denied = ("risk.declined", {"risk": decision.to_dict()})
+                    raise RiskDeclined("payment declined by risk engine", details=decision.to_dict())
+                self.mandates.reserve(mandate.id, amount)
+                pi = PaymentIntent(agent_id=agent.id, principal_id=agent.principal_id, mandate_id=mandate.id,
+                                   amount=amount, currency=currency, merchant_id=merchant_id, category=category,
+                                   description=description, payment_method=pm, capture_method=capture_method,
+                                   provider=provider, risk=decision.to_dict(), metadata=metadata or {})
+                self._save(pi)
+        finally:
+            # Denials are audited *after* the rollback, otherwise they vanish with it.
+            if denied:
+                kind, extra = denied
+                if mandate.agent_id == agent.id:
+                    self.audit.record(mandate.id, kind, **attempt, **extra)
+                self.events.emit(kind, {**attempt, "mandate_id": mandate.id, **extra})
+
         self._emit(pi, "payment_intent.created")
 
         if decision.decision == "review":
