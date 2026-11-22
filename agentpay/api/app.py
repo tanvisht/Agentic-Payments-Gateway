@@ -50,6 +50,7 @@ def create_app(gw: Gateway | None = None, *, merchant=None) -> FastAPI:
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
     limiter = RateLimiter(gw.settings.rate_per_s, gw.settings.rate_burst)
+    app.state.limiter = limiter
     configure_logging()
 
     @app.middleware("http")

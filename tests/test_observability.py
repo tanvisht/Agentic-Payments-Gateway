@@ -20,10 +20,11 @@ def test_request_id_echo_and_error_body(admin):
 
 def test_rate_limit_returns_429(gw, app):
     from fastapi.testclient import TestClient
-    gw_app = app
-    c = TestClient(gw_app)
-    gw_app.user_middleware  # noqa: B018 - app built
-    codes = [c.get("/healthz", headers={"Authorization": "Bearer flood"}).status_code for _ in range(80)]
+    app.state.limiter.clock = lambda: 0.0  # frozen clock: no refill, so the result can't depend on machine speed
+    c = TestClient(app)
+    burst = app.state.limiter.burst
+    codes = [c.get("/healthz", headers={"Authorization": "Bearer flood"}).status_code for _ in range(burst + 5)]
+    assert codes[:burst] == [200] * burst
     assert 429 in codes
     r = c.get("/healthz", headers={"Authorization": "Bearer flood"})
     assert r.status_code == 429 and int(r.headers["Retry-After"]) >= 1

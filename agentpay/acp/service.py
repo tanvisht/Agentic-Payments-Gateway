@@ -132,17 +132,26 @@ class MerchantService:
             s.history.append({"role": "merchant", "type": "clarification", "text": q, "at": now()})
             self._save(s)
             return {"type": "clarification", "missing": need, "question": q, "requirements": s.requirements}
+        # Product words can arrive in any turn ("headphones" ... "under $400"), so search
+        # over everything the buyer has said in this session, not just the last message.
+        query = " ".join(h["text"] for h in s.history if h.get("role") == "buyer")
         offers = [self._make_offer(s, p) for p in catalog.search(
-            text, max_price=s.requirements["max_price"], category=s.requirements["category"],
+            query, max_price=s.requirements["max_price"], category=s.requirements["category"],
             size=s.requirements.get("size"), limit=3)]
-        if not offers:  # relax the free-text match, keep hard constraints
-            offers = [self._make_offer(s, p) for p in catalog.search(
+        alternatives: list[dict] = []
+        if not offers:
+            # Never substitute silently: unrelated items in the same category are returned as
+            # unsigned *alternatives* the buyer must explicitly ask for, not as offers.
+            alternatives = [p.to_dict() for p in catalog.search(
                 "", max_price=s.requirements["max_price"], category=s.requirements["category"],
                 size=s.requirements.get("size"), limit=3)]
         s.history.append({"role": "merchant", "type": "offers", "offer_ids": [o.id for o in offers], "at": now()})
         self._save(s)
-        return {"type": "offers", "offers": [o.model_dump() for o in offers], "requirements": s.requirements,
-                **({} if offers else {"message": "Nothing matches those constraints."})}
+        out = {"type": "offers", "offers": [o.model_dump() for o in offers], "requirements": s.requirements}
+        if not offers:
+            out["message"] = "Nothing matches exactly; see alternatives." if alternatives else "Nothing matches those constraints."
+            out["alternatives"] = alternatives
+        return out
 
     # -- offers --------------------------------------------------------------
     def _make_offer(self, s: AcpSession, p: catalog.Product, size: str | None = None) -> Offer:

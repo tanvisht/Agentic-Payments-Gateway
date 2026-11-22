@@ -1,14 +1,15 @@
 {
  "goal": "Buy noise cancelling headphones under $400",
- "result": "Order ord_mwr8cyu8e9f8e50d68df confirmed, payment pi_mwr8cyu4da6b654bfed8",
- "recorded_at": 1795315273,
+ "result": "Order ord_mws801tvd7c626e2d447 confirmed, payment pi_mws801tr24086549f207",
+ "recorded_at": 1795375137,
+ "live": false,
  "events": [
   {
-   "t": 1.4,
+   "t": 3.8,
    "actor": "principal",
    "kind": "mandate.signed",
    "data": {
-    "mandate_id": "mdt_mwr8cysxc0b5c8888e4c",
+    "mandate_id": "mdt_mws801ou65e112bf11e5",
     "scope": {
      "currency": "USD",
      "max_amount_per_txn": 50000,
@@ -31,20 +32,20 @@
      "max_txn_count": null,
      "requires_human_above": null
     },
-    "signature": "I5DqVtSNYKgKCsliRsLUqP2l\u2026"
+    "signature": "ehwfwTrMZFQ7vT1fj3lloTCR\u2026"
    }
   },
   {
-   "t": 21.2,
+   "t": 158.3,
    "actor": "merchant",
    "kind": "acp.session",
    "data": {
-    "session_id": "sess_mwr8cytg8c50880330a4",
-    "merchant_key": "c4H2LLXkXrhyFz9D\u2026"
+    "session_id": "sess_mws801t455dda02e8730",
+    "merchant_key": "brS3QL27v05M9xR7\u2026"
    }
   },
   {
-   "t": 34.0,
+   "t": 170.9,
    "actor": "agent",
    "kind": "tool_call",
    "data": {
@@ -53,13 +54,13 @@
    }
   },
   {
-   "t": 37.5,
+   "t": 173.8,
    "actor": "agent",
    "kind": "tool_result",
    "data": {
     "name": "check_mandate",
     "output": {
-     "id": "mdt_mwr8cysxc0b5c8888e4c",
+     "id": "mdt_mws801ou65e112bf11e5",
      "scope": {
       "currency": "USD",
       "max_amount_per_txn": 50000,
@@ -85,14 +86,14 @@
      "spent_amount": 0,
      "reserved_amount": 0,
      "remaining": 150000,
-     "expires_at": 1795920073,
+     "expires_at": 1795979936,
      "status": "active"
     },
     "is_error": false
    }
   },
   {
-   "t": 37.6,
+   "t": 173.9,
    "actor": "agent",
    "kind": "tool_call",
    "data": {
@@ -103,7 +104,7 @@
    }
   },
   {
-   "t": 40.9,
+   "t": 176.7,
    "actor": "agent",
    "kind": "tool_result",
    "data": {
@@ -112,8 +113,8 @@
      "type": "offers",
      "offers": [
       {
-       "id": "ofr_mwr8cytz69c05bf827b6",
-       "session_id": "sess_mwr8cytg8c50880330a4",
+       "id": "ofr_mws801tm2714e2d28867",
+       "session_id": "sess_mws801t455dda02e8730",
        "sku": "sa-anc-h900",
        "merchant_id": "sonicaudio.store",
        "name": "H900 Noise-Cancelling Headphones",
@@ -121,10 +122,10 @@
        "price": 34900,
        "currency": "USD",
        "size": null,
-       "expires_at": 1795315873,
-       "signature": "nJqRLYBkJzWdRu1tGxFjWGq7BiO6gZvkZOBqu4ubJHk_CMYEwtHeyfKnbWq5SSxhkJeLnN-tvaRYNunsDRCLAQ",
+       "expires_at": 1795375737,
+       "signature": "r1Dy0Y9bqRrcLFgCA428ueX2xMQGgTrZW5DCJJ5fsqeUJ6nyflrc75_7umOvhoTNEHoK4HUaTulM3a4pwQpwDg",
        "status": "open",
-       "created_at": 1795315273,
+       "created_at": 1795375137,
        "signature_valid": true
       }
      ],
@@ -137,34 +138,34 @@
    }
   },
   {
-   "t": 40.9,
+   "t": 176.7,
    "actor": "agent",
    "kind": "agent_message",
    "data": {
-    "text": "Accepting signed offer ofr_mwr8cytz69c05bf827b6: H900 Noise-Cancelling Headphones at $349.00"
+    "text": "Accepting signed offer ofr_mws801tm2714e2d28867: H900 Noise-Cancelling Headphones at $349.00"
    }
   },
   {
-   "t": 40.9,
+   "t": 176.7,
    "actor": "agent",
    "kind": "tool_call",
    "data": {
     "name": "buy_offer",
     "input": {
-     "offer_id": "ofr_mwr8cytz69c05bf827b6"
+     "offer_id": "ofr_mws801tm2714e2d28867"
     }
    }
   },
   {
-   "t": 44.2,
+   "t": 180.9,
    "actor": "gateway",
    "kind": "payment_intent.created",
    "data": {
     "payment_intent": {
-     "id": "pi_mwr8cyu4da6b654bfed8",
-     "agent_id": "agt_mwr8cysx2a2f54a07122",
-     "principal_id": "prn_mwr8cyswe33a2c65be1c",
-     "mandate_id": "mdt_mwr8cysxc0b5c8888e4c",
+     "id": "pi_mws801tr24086549f207",
+     "agent_id": "agt_mws801ot57a276bebf14",
+     "principal_id": "prn_mws801ora47c00f064e5",
+     "mandate_id": "mdt_mws801ou65e112bf11e5",
      "amount": 34900,
      "currency": "USD",
      "merchant_id": "sonicaudio.store",
@@ -185,25 +186,25 @@
      "last_error": null,
      "next_action": null,
      "metadata": {
-      "offer_id": "ofr_mwr8cytz69c05bf827b6",
+      "offer_id": "ofr_mws801tm2714e2d28867",
       "sku": "sa-anc-h900"
      },
      "attempts": [],
-     "created_at": 1795315273,
-     "updated_at": 1795315273
+     "created_at": 1795375137,
+     "updated_at": 1795375137
     }
    }
   },
   {
-   "t": 44.7,
+   "t": 181.3,
    "actor": "gateway",
    "kind": "payment_intent.succeeded",
    "data": {
     "payment_intent": {
-     "id": "pi_mwr8cyu4da6b654bfed8",
-     "agent_id": "agt_mwr8cysx2a2f54a07122",
-     "principal_id": "prn_mwr8cyswe33a2c65be1c",
-     "mandate_id": "mdt_mwr8cysxc0b5c8888e4c",
+     "id": "pi_mws801tr24086549f207",
+     "agent_id": "agt_mws801ot57a276bebf14",
+     "principal_id": "prn_mws801ora47c00f064e5",
+     "mandate_id": "mdt_mws801ou65e112bf11e5",
      "amount": 34900,
      "currency": "USD",
      "merchant_id": "sonicaudio.store",
@@ -224,7 +225,7 @@
      "last_error": null,
      "next_action": null,
      "metadata": {
-      "offer_id": "ofr_mwr8cytz69c05bf827b6",
+      "offer_id": "ofr_mws801tm2714e2d28867",
       "sku": "sa-anc-h900"
      },
      "attempts": [
@@ -233,38 +234,38 @@
        "outcome": "captured"
       }
      ],
-     "created_at": 1795315273,
-     "updated_at": 1795315273
+     "created_at": 1795375137,
+     "updated_at": 1795375137
     }
    }
   },
   {
-   "t": 48.1,
+   "t": 185.4,
    "actor": "gateway",
    "kind": "acp.order.confirmed",
    "data": {
     "order": {
-     "id": "ord_mwr8cyu8e9f8e50d68df",
-     "offer_id": "ofr_mwr8cytz69c05bf827b6",
-     "session_id": "sess_mwr8cytg8c50880330a4",
-     "payment_intent_id": "pi_mwr8cyu4da6b654bfed8",
+     "id": "ord_mws801tvd7c626e2d447",
+     "offer_id": "ofr_mws801tm2714e2d28867",
+     "session_id": "sess_mws801t455dda02e8730",
+     "payment_intent_id": "pi_mws801tr24086549f207",
      "merchant_id": "sonicaudio.store",
      "amount": 34900,
      "currency": "USD",
      "status": "confirmed",
-     "created_at": 1795315273
+     "created_at": 1795375137
     }
    }
   },
   {
-   "t": 49.3,
+   "t": 186.2,
    "actor": "agent",
    "kind": "tool_result",
    "data": {
     "name": "buy_offer",
     "output": {
      "payment": {
-      "id": "pi_mwr8cyu4da6b654bfed8",
+      "id": "pi_mws801tr24086549f207",
       "status": "succeeded",
       "amount": 34900,
       "currency": "USD",
@@ -272,51 +273,51 @@
       "last_error": null
      },
      "order": {
-      "id": "ord_mwr8cyu8e9f8e50d68df",
-      "offer_id": "ofr_mwr8cytz69c05bf827b6",
-      "session_id": "sess_mwr8cytg8c50880330a4",
-      "payment_intent_id": "pi_mwr8cyu4da6b654bfed8",
+      "id": "ord_mws801tvd7c626e2d447",
+      "offer_id": "ofr_mws801tm2714e2d28867",
+      "session_id": "sess_mws801t455dda02e8730",
+      "payment_intent_id": "pi_mws801tr24086549f207",
       "merchant_id": "sonicaudio.store",
       "amount": 34900,
       "currency": "USD",
       "status": "confirmed",
-      "created_at": 1795315273
+      "created_at": 1795375137
      }
     },
     "is_error": false
    }
   },
   {
-   "t": 49.4,
+   "t": 186.2,
    "actor": "agent",
    "kind": "agent_message",
    "data": {
-    "text": "Order ord_mwr8cyu8e9f8e50d68df confirmed, payment pi_mwr8cyu4da6b654bfed8"
+    "text": "Order ord_mws801tvd7c626e2d447 confirmed, payment pi_mws801tr24086549f207"
    }
   },
   {
-   "t": 49.7,
+   "t": 186.7,
    "actor": "gateway",
    "kind": "ledger",
    "data": {
     "entries": [
      {
-      "txn_id": "jrnl_mwr8cyu422eebc33099b",
-      "account": "principal:prn_mwr8cyswe33a2c65be1c:funding",
+      "txn_id": "jrnl_mws801tr008f0889895e",
+      "account": "principal:prn_mws801ora47c00f064e5:funding",
       "currency": "USD",
       "debit": 34900,
       "credit": 0,
       "memo": "capture",
-      "created_at": 1795315273
+      "created_at": 1795375137
      },
      {
-      "txn_id": "jrnl_mwr8cyu422eebc33099b",
+      "txn_id": "jrnl_mws801tr008f0889895e",
       "account": "merchant:sonicaudio.store:receivable",
       "currency": "USD",
       "debit": 0,
       "credit": 34900,
       "memo": "capture",
-      "created_at": 1795315273
+      "created_at": 1795375137
      }
     ],
     "trial_balance": {
@@ -325,12 +326,12 @@
    }
   },
   {
-   "t": 50.2,
+   "t": 187.5,
    "actor": "gateway",
    "kind": "receipt",
    "data": {
-    "signature": "hjKTj8s4Qw6RYkhPC9iKGW8f\u2026",
-    "mandate_sha256": "0a8a4e4d99247649\u2026"
+    "signature": "ZUWs9glX7IHa1qjUG1S8jjJ2\u2026",
+    "mandate_sha256": "90856b61f2a8f787\u2026"
    }
   }
  ]
