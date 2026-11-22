@@ -7,7 +7,7 @@
 [![CI](https://github.com/tanvisht/Agentic-Payments-Gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/tanvisht/Agentic-Payments-Gateway/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%2B-black) ![license](https://img.shields.io/badge/license-MIT-black)
 
-`Live demo: coming with the frontend release`
+**[Live site → agentpay-gateway-navy.vercel.app](https://agentpay-gateway-navy.vercel.app)**
 
 </div>
 
