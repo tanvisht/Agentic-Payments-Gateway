@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentPay | Agentic Payments Gateway</title>
+<meta name="description" content="A contactless, mandate-bound payment gateway that lets AI agents pay on your behalf: cards via Stripe, on-chain escrow, and x402 stablecoins.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <a class="nav-logo" href="#top" aria-label="AgentPay home">
+    <svg viewBox="0 0 40 40" width="38" height="38" aria-hidden="true"><circle cx="20" cy="20" r="18.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M11 27 L20 11 L29 27 M14.5 21.5 H25.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>AGENTPAY</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how" class="is-current">Gateway</a>
+    <a href="#demo">Live Demo</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <a class="pill pill-dark" href="https://github.com/tanvisht/Agentic-Payments-Gateway" target="_blank" rel="noopener">View on GitHub</a>
+</nav>
+
+<header class="hero" id="top">
+  <canvas id="tunnel" aria-label="3D tunnel of agent transactions orbiting a payment card"></canvas>
+  <div class="hero-shade"></div>
+  <div class="hero-copy">
+    <h1>THE AGENT PAYS.<br>YOU STAY IN CONTROL.</h1>
+    <a class="pill pill-light" href="#demo">Watch It Transact</a>
+  </div>
+</header>
+
+<main>
+  <section class="light" id="how">
+    <div class="sec-head"><h2>HOW AN AGENT<br>PAYS FOR YOU</h2><span class="count">06</span></div>
+    <hr>
+    <div class="steps">
+      <div class="step"><span class="num">01</span><h3>You sign a mandate</h3><p>Spend limits, merchants, categories and an expiry, signed with your own Ed25519 key. The gateway never holds it.</p></div>
+      <div class="step"><span class="num">02</span><h3>Your agent negotiates</h3><p>Over the Agentic Commerce Protocol it asks the merchant, answers clarifying questions, and receives signed, price-locked offers.</p></div>
+      <div class="step"><span class="num">03</span><h3>Every request is signed</h3><p>API key plus an Ed25519 signature, a timestamp window and a single-use nonce. A leaked key alone moves nothing.</p></div>
+      <div class="step"><span class="num">04</span><h3>Mandate and risk decide</h3><p>Budget is reserved atomically. Runaway loops, duplicates and low-reputation agents are stopped or escalated to you.</p></div>
+      <div class="step"><span class="num">05</span><h3>Money moves on any rail</h3><p>Stripe cards, an on-chain escrow contract, or x402 USDC, all behind one interface with failover.</p></div>
+      <div class="step"><span class="num">06</span><h3>Everything reconciles</h3><p>A double-entry ledger, gateway-signed receipts, and an audit trail of everything the agent tried.</p></div>
+    </div>
+  </section>
+
+  <section class="dark rails">
+    <div class="sec-head"><h2>THREE RAILS.<br>ONE GATEWAY.</h2><span class="count">03</span></div>
+    <div class="rail-grid">
+      <article><span class="tag">Cards</span><h3>Stripe</h3><p>Off-session PaymentIntents on a card saved through a SetupIntent. Manual or automatic capture, partial capture, refunds, 3-D Secure escalation.</p></article>
+      <article><span class="tag">On-chain</span><h3>Escrow</h3><p>A Solidity contract locks USDC on authorize and releases on capture. After the deadline anyone can refund, so funds are never stranded.</p></article>
+      <article><span class="tag">Stablecoin</span><h3>x402</h3><p>HTTP 402 Payment Required. The agent signs an EIP-3009 authorization, and a facilitator verifies and settles it.</p></article>
+    </div>
+    <ul class="ticker" aria-hidden="true"><li>Mandate-bound</li><li>Signed requests</li><li>Atomic budgets</li><li>Failover routing</li><li>Double-entry ledger</li><li>Signed receipts</li><li>Agent reputation</li><li>Full audit trail</li></ul>
+  </section>
+
+  <section class="light" id="demo">
+    <div class="sec-head"><h2>A REAL TRANSACTION,<br>STEP BY STEP</h2><span class="count" id="demo-count">00</span></div>
+    <hr>
+    <div class="demo-top">
+      <p class="goal">Goal: <strong id="goal">…</strong></p>
+      <div class="demo-ctl"><button class="pill pill-dark" id="play">Replay</button><span class="small" id="demo-note">Recorded from a live gateway run</span></div>
+    </div>
+    <div class="lanes" id="lanes">
+      <div class="lane" data-actor="principal"><h4>You</h4></div>
+      <div class="lane" data-actor="agent"><h4>Agent</h4></div>
+      <div class="lane" data-actor="merchant"><h4>Merchant</h4></div>
+      <div class="lane" data-actor="gateway"><h4>Gateway</h4></div>
+    </div>
+    <div class="result" id="result"></div>
+  </section>
+
+  <section class="light" id="faq">
+    <div class="sec-head"><h2>FREQUENTLY<br>ASKED QUESTIONS</h2><span class="count" id="faq-count">00</span></div>
+    <hr>
+    <div class="faq-group"><h5>ABOUT AGENTPAY</h5><div class="acc">
+      <details open><summary>What is AgentPay?</summary><p>A payment gateway built for AI agents. You delegate bounded spending authority once, as a signed mandate. Your agent can then buy on your behalf through any connected rail: cards via Stripe, on-chain escrow, or x402 stablecoins. Every payment is checked against your mandate and a risk engine before money moves.</p></details>
+      <details><summary>Does the agent ever see my card?</summary><p>No. You save a card once through a Stripe SetupIntent in your own browser. The agent only ever holds its own signing key and a narrow set of tools: search, check mandate, buy an offer. It cannot even choose a raw amount, only a merchant-signed offer price.</p></details>
+      <details><summary>What stops a runaway or hijacked agent?</summary><p>Five independent layers: request signatures with single-use nonces, the signed mandate (limits, merchants, categories, expiry), atomic budget reservation, a risk engine tuned to agent failure modes (velocity, duplicates, near-limit amounts, low reputation), and escalation to you above any threshold you choose.</p></details>
+    </div></div>
+    <div class="faq-group"><h5>RAILS &amp; MONEY</h5><div class="acc">
+      <details><summary>Which payment providers are supported?</summary><p>Stripe for cards today, plus an on-chain escrow rail (Solidity, USDC) and x402 stablecoin payments. New processors implement six methods behind one interface. The gateway handles routing, circuit breakers and failover on retryable errors.</p></details>
+      <details><summary>How is money accounted for?</summary><p>Every movement is a balanced double-entry journal. Balances are derived, never stored, and the trial balance must always be zero. Property-based tests throw thousands of random payment, capture, cancel and refund sequences at the gateway to prove it.</p></details>
+      <details><summary>Can I see everything my agent did?</summary><p>Yes. The per-mandate audit shows what you authorized next to every attempt the agent made, including ones that were blocked. It re-checks each payment against your signed scope and reports what the agent's reasoning cost in LLM tokens.</p></details>
+    </div></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="foot-left"><h2>A QUIETER WAY<br>FOR AGENTS TO PAY</h2><a class="pill pill-light" href="https://github.com/tanvisht/Agentic-Payments-Gateway" target="_blank" rel="noopener">Read the Code</a></div>
+  <div class="foot-cols">
+    <div><span>PROJECT</span><a href="https://github.com/tanvisht/Agentic-Payments-Gateway#3-system-architecture">Architecture</a><a href="https://github.com/tanvisht/Agentic-Payments-Gateway#13-api-reference">API reference</a><a href="#faq">FAQ</a></div>
+    <div><span>BUILT WITH</span><a>Python · FastAPI</a><a>Stripe · Solidity · x402</a><a>Claude agents</a></div>
+  </div>
+  <p class="fine">AgentPay. Open source under MIT. Demo data is test-mode only.</p>
+</footer>
+
+<script type="module" src="tunnel.js"></script>
+<script src="app.js" defer></script>
+</body>
+</html>
