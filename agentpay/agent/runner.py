@@ -86,15 +86,32 @@ def run_acp_deterministic(goal: str, tools: ToolExecutor, on_event: Callable[[st
     emit = on_event or (lambda *_: None)
     m = json.loads(tools("check_mandate", {})[0])
     pending = list(answers or [])
+    cap = min(m["remaining"], m["scope"]["max_amount_per_txn"])
+
+    def answer(missing: list[str]) -> str | None:
+        """Answer exactly the fields the merchant asked for: budget from the mandate, size from supplied answers."""
+        parts = []
+        for f in missing:
+            if f == "max_price":
+                parts.append(f"budget ${cap / 100:.0f}")
+            elif f == "size":
+                given = next((a for a in pending if "size" in a.lower()), None)
+                if not given:
+                    return None
+                parts.append(given)
+            else:
+                return None
+        return ", ".join(parts) or None
+
     res, err = tools("ask_merchant", {"message": goal})
     res = json.loads(res)
     for _ in range(4):
         if err or res.get("type") != "clarification":
             break
-        if not pending:
-            emit("agent_message", {"text": f"Merchant asks: {res['question']} (no answer available)"})
+        reply = answer(res.get("missing", []))
+        if not reply:
+            emit("agent_message", {"text": f"Merchant asks: {res['question']} I need to check with you first."})
             return "Needs more information from the user."
-        reply = pending.pop(0)
         emit("agent_message", {"text": f"Answering merchant: {reply}"})
         res, err = tools("ask_merchant", {"message": reply})
         res = json.loads(res)

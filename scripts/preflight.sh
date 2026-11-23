@@ -24,4 +24,7 @@ if [ -d web ]; then
   python3 -c "import json;json.load(open('web/trace.json'))"
   test -s web/vendor/three.module.min.js
 fi
+echo "== vercel config + serverless function import"
+python3 -c "import json; c=json.load(open('vercel.json')); assert c['outputDirectory']=='web'"
+python3 -c "import api.run"
 echo "PREFLIGHT OK"

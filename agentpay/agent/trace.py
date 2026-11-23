@@ -39,7 +39,7 @@ def run_trace(goal: str = DEFAULT_GOAL, *, budget_cents: int = 50000) -> dict[st
         events.append({"t": round((time.perf_counter() - t0) * 1000, 1), "actor": actor, "kind": kind, "data": data})
 
     gw.events.subscribe_local(lambda e: add("gateway", e.type, e.data))
-    _, _, agent, akp, key, mandate = bootstrap(gw, per_txn=budget_cents, total=max(budget_cents, 150000))
+    _, _, agent, akp, key, mandate = bootstrap(gw, per_txn=budget_cents, total=budget_cents)
     add("principal", "mandate.signed", {"mandate_id": mandate.id, "scope": mandate.scope.model_dump(),
                                         "signature": mandate.signature[:24] + "…"})
     acp = AcpClient(TestClient(app))
@@ -47,7 +47,7 @@ def run_trace(goal: str = DEFAULT_GOAL, *, budget_cents: int = 50000) -> dict[st
     add("merchant", "acp.session", {"session_id": acp.session_id, "merchant_key": (acp.merchant_key or "")[:16] + "…"})
     tools = ToolExecutor(in_process_client(app, key, akp), mandate.id, acp=acp, on_event=lambda k, d: add("agent", k, d))
     result = run_acp_deterministic(goal, tools, on_event=lambda k, d: add("agent", k, d),
-                                   answers=["size 10", f"budget ${budget_cents / 100:.0f}"])
+                                   answers=["size 10"])
     intents = gw.payments.list_for_agent(agent.id)
     if intents:
         pi = intents[0]

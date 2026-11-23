@@ -61,9 +61,22 @@
   <section class="light" id="demo">
     <div class="sec-head"><h2>A REAL TRANSACTION,<br>STEP BY STEP</h2><span class="count" id="demo-count">00</span></div>
     <hr>
+    <form class="run" id="run-form" autocomplete="off">
+      <div class="chips" role="group" aria-label="Example goals">
+        <button type="button" class="chip" data-goal="Buy noise cancelling headphones under $400" data-budget="400">Headphones · $400</button>
+        <button type="button" class="chip" data-goal="Running shoes, size 10" data-budget="170">Running shoes · $170</button>
+        <button type="button" class="chip" data-goal="A usb-c charger" data-budget="50">USB-C charger · $50</button>
+        <button type="button" class="chip warn" data-goal="Buy a laptop" data-budget="300">Laptop · $300 (should be refused)</button>
+      </div>
+      <div class="run-row">
+        <label class="field grow"><span>Goal for the agent</span><input id="goal-in" maxlength="160" value="Buy noise cancelling headphones under $400"></label>
+        <label class="field"><span>Mandate limit ($)</span><input id="budget-in" type="number" min="1" max="1500" step="1" value="400"></label>
+        <button class="pill pill-dark" id="run-btn" type="submit">Run it live</button>
+      </div>
+    </form>
     <div class="demo-top">
       <p class="goal">Goal: <strong id="goal">…</strong></p>
-      <div class="demo-ctl"><button class="pill pill-dark" id="play">Replay</button><span class="small" id="demo-note">Recorded from a live gateway run</span></div>
+      <div class="demo-ctl"><button class="pill pill-light" id="play" type="button">Replay</button><span class="small" id="demo-note" aria-live="polite">Recorded from a live gateway run</span></div>
     </div>
     <div class="lanes" id="lanes">
       <div class="lane" data-actor="principal"><h4>You</h4></div>

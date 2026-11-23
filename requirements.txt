@@ -1,0 +1,5 @@
+# Runtime deps for the Vercel demo function (api/run.py). Full deps live in pyproject.toml.
+fastapi>=0.110
+pydantic>=2.6
+httpx>=0.27
+cryptography>=42

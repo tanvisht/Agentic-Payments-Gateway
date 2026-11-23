@@ -1,0 +1,8 @@
+tests/
+contracts/
+scripts/
+.github/
+*.md
+!web/**
+pyproject.toml
+Dockerfile
