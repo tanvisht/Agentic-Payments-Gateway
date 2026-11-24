@@ -27,10 +27,15 @@
 </nav>
 
 <header class="hero" id="top">
-  <canvas id="tunnel" aria-label="3D tunnel of agent transactions orbiting a payment card"></canvas>
+  <div class="hero-media" data-scrub="hero-media">
+    <video class="hero-video" id="hero-video" autoplay muted loop playsinline preload="auto" poster="media/hero-poster.jpg"
+      aria-label="Film: a metal AgentPay card turning inside a tunnel of rooms">
+      <source src="media/hero.mp4" type="video/mp4">
+    </video>
+  </div>
   <div class="hero-shade"></div>
   <div class="hero-copy" data-scrub="hero">
-    <h1>THE AGENT PAYS.<br>YOU STAY IN CONTROL.</h1>
+    <h1 data-reveal="lines" class="hero-h1">THE AGENT PAYS.<br>YOU STAY IN CONTROL.</h1>
     <a class="pill pill-light" href="#demo">Watch It Transact</a>
   </div>
 </header>
@@ -49,6 +54,18 @@
     </div>
   </section>
 
+  <section class="dark stats">
+    <div class="sec-head" data-reveal="fade"><h2 data-reveal="lines">BUILT LIKE<br>PAYMENTS INFRA</h2><span class="count">PROOF</span></div>
+    <div class="stat-grid" data-stagger>
+      <div class="stat"><b data-count="137">137</b><span>tests on every push, on SQLite and Postgres</span></div>
+      <div class="stat"><b data-count="500">500</b><span>random payment sequences per property run, money never drifts</span></div>
+      <div class="stat"><b data-count="3">3</b><span>payment rails behind one interface: cards, escrow, x402</span></div>
+      <div class="stat"><b data-count="0">0</b><span>trial-balance drift: every journal entry balances</span></div>
+      <div class="stat"><b data-count="20">20</b><span>agents racing one budget in tests; nothing overspent</span></div>
+      <div class="stat"><b data-count="70" data-suffix="ms">70ms</b><span>for a full negotiated purchase on the live demo</span></div>
+    </div>
+  </section>
+
   <section class="dark rails">
     <div class="sec-head" data-reveal="fade"><h2 data-reveal="lines">THREE RAILS.<br>ONE GATEWAY.</h2><span class="count" data-count="3">03</span></div>
     <div class="rail-grid" data-stagger>
@@ -57,6 +74,18 @@
       <article><span class="tag">Stablecoin</span><h3>x402</h3><p>HTTP 402 Payment Required. The agent signs an EIP-3009 authorization, and a facilitator verifies and settles it.</p></article>
     </div>
     <ul class="ticker" aria-hidden="true" data-velocity><li>Mandate-bound</li><li>Signed requests</li><li>Atomic budgets</li><li>Failover routing</li><li>Double-entry ledger</li><li>Signed receipts</li><li>Agent reputation</li><li>Full audit trail</li></ul>
+  </section>
+
+  <section class="light layers">
+    <div class="sec-head" data-reveal="fade"><h2 data-reveal="lines">FIVE LAYERS BETWEEN<br>AN AGENT AND YOUR MONEY</h2><span class="count" data-count="5">05</span></div>
+    <hr>
+    <div class="stack">
+      <article class="layer" style="--k:0"><span class="num">L1</span><div><h3>Signed requests</h3><p>Every call carries an Ed25519 signature over method, path, body hash, timestamp and a single-use nonce. A stolen API key alone cannot move a cent, and replays are rejected.</p></div><code>X-AgentPay-Signature</code></article>
+      <article class="layer" style="--k:1"><span class="num">L2</span><div><h3>Your signed mandate</h3><p>Per-purchase and total limits, allowed merchants and categories, a transaction count and an expiry, signed with your key. The agent cannot widen its own scope; any change breaks the signature.</p></div><code>agentpay.mandate.v1</code></article>
+      <article class="layer" style="--k:2"><span class="num">L3</span><div><h3>Atomic budget reservation</h3><p>Money is reserved inside a serialized transaction before any processor is called, so twenty agents racing one budget can never overspend it.</p></div><code>reserve → settle | release</code></article>
+      <article class="layer" style="--k:3"><span class="num">L4</span><div><h3>Risk built for agents</h3><p>Runaway loops, duplicate charges, near-limit amounts and low-reputation agents are declined or escalated to you for a one-tap signed approval.</p></div><code>allow · review · deny</code></article>
+      <article class="layer" style="--k:4"><span class="num">L5</span><div><h3>Proof after the fact</h3><p>A double-entry ledger that always balances, gateway-signed receipts anyone can verify offline, and an audit trail of everything the agent tried, including what was blocked.</p></div><code>agentpay.receipt.v1</code></article>
+    </div>
   </section>
 
   <section class="dark film">
@@ -82,13 +111,24 @@
     </form>
     <div class="demo-top">
       <p class="goal">Goal: <strong id="goal">…</strong></p>
-      <div class="demo-ctl"><button class="pill pill-light" id="play" type="button">Replay</button><span class="small" id="demo-note" aria-live="polite">Recorded from a live gateway run</span></div>
+      <div class="demo-ctl"><button class="pill pill-light" id="play" type="button">Replay</button><span class="small" id="demo-note" aria-live="polite">Recorded from a live gateway run · scroll to step through it</span></div>
     </div>
-    <div class="lanes" id="lanes">
-      <div class="lane" data-actor="principal"><h4>You</h4></div>
-      <div class="lane" data-actor="agent"><h4>Agent</h4></div>
-      <div class="lane" data-actor="merchant"><h4>Merchant</h4></div>
-      <div class="lane" data-actor="gateway"><h4>Gateway</h4></div>
+    <div class="tx-stage" id="tx-stage">
+      <div class="tx-sticky">
+        <div class="tx-caption" aria-live="polite">
+          <div class="tx-step"><span id="tx-n">00</span><i>/</i><span id="tx-total">00</span></div>
+          <span class="tx-actor" id="tx-actor">Ready</span>
+          <h3 class="tx-title" id="tx-title">Scroll to run the purchase</h3>
+          <p class="tx-detail" id="tx-detail">Each step below is real output from the gateway: signatures, offers, risk, the charge, the ledger and the receipt.</p>
+          <div class="tx-rail" id="tx-rail" aria-hidden="true"></div>
+        </div>
+        <div class="lanes" id="lanes">
+          <div class="lane" data-actor="principal"><h4>You</h4></div>
+          <div class="lane" data-actor="agent"><h4>Agent</h4></div>
+          <div class="lane" data-actor="merchant"><h4>Merchant</h4></div>
+          <div class="lane" data-actor="gateway"><h4>Gateway</h4></div>
+        </div>
+      </div>
     </div>
     <div class="result" id="result"></div>
   </section>
@@ -118,7 +158,6 @@
   <p class="fine">AgentPay. Open source under MIT. Demo data is test-mode only.</p>
 </footer>
 
-<script type="module" src="tunnel.js"></script>
 <script src="vendor/lenis.min.js" defer></script>
 <script src="motion.js" defer></script>
 <script src="app.js" defer></script>

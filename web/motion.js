@@ -40,6 +40,9 @@
     entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); countUp(e.target); } });
   }, { threshold: 0.15, rootMargin: "0px 0px -8% 0px" });
   document.querySelectorAll("[data-reveal]").forEach((el) => io.observe(el));
+  // the hero headline reveals on load, after the film has a moment to breathe
+  const h1 = document.querySelector(".hero-h1");
+  if (h1) { io.unobserve(h1); setTimeout(() => h1.classList.add("is-in"), 450); }
 
   function countUp(el) {
     el.querySelectorAll?.("[data-count]").forEach((c) => {
@@ -48,7 +51,7 @@
       const t0 = performance.now(), dur = 900;
       (function tick(t) {
         const k = Math.min(1, (t - t0) / dur), v = Math.round(to * (1 - Math.pow(1 - k, 3)));
-        c.textContent = String(v).padStart(2, "0");
+        c.textContent = (to >= 10 ? String(v) : String(v).padStart(2, "0")) + (c.dataset.suffix || "");
         if (k < 1) requestAnimationFrame(tick);
       })(t0);
     });
@@ -56,6 +59,8 @@
 
   // ---- scrubbed + velocity effects, all on Lenis' frame
   const heroCopy = document.querySelector("[data-scrub='hero']");
+  const heroMedia = document.querySelector("[data-scrub='hero-media']");
+  const layers = [...document.querySelectorAll(".layer")];
   const scales = [...document.querySelectorAll("[data-scrub='scale']")];
   const tickers = [...document.querySelectorAll("[data-velocity]")];
   const nav = document.getElementById("nav");
@@ -69,6 +74,20 @@
       heroCopy.style.transform = `translate3d(0, ${-p * 120}px, 0)`;
       heroCopy.style.opacity = String(1 - p * 1.2);
     }
+    if (heroMedia) {
+      const p = clamp(scroll / vh, 0, 1);
+      heroMedia.style.transform = `translate3d(0, ${p * vh * 0.35}px, 0) scale(${1 + p * 0.12})`;
+      heroMedia.style.opacity = String(1 - p * 0.55);
+    }
+    // stacking layers: a card shrinks and dims as the next one slides over it
+    layers.forEach((el, i) => {
+      const next = layers[i + 1];
+      if (!next) return;
+      const a = el.getBoundingClientRect(), b = next.getBoundingClientRect();
+      const p = clamp(1 - (b.top - a.top) / (a.height + 22), 0, 1);
+      el.style.transform = `scale(${1 - p * 0.06})`;
+      el.style.filter = `brightness(${1 - p * 0.25})`;
+    });
     scales.forEach((el) => {
       const r = el.getBoundingClientRect();
       const p = clamp((vh - r.top) / (vh * 0.9), 0, 1);
