@@ -537,7 +537,23 @@ agentpay/
 └── cli.py         `agentpay serve | demo`
 contracts/         AgentEscrow.sol, TestUSDC.sol, build script, compiled artifacts
 tests/             pytest suite (SQLite + Postgres, EVM, property-based)
+api/run.py         Vercel serverless function: runs a real negotiated purchase and returns its trace
+web/               static site: three.js transaction-tunnel hero, Lenis smooth scroll,
+                   scroll-pinned step-by-step replay of a real trace, "Run it live"
+scripts/film/      deterministic, code-rendered films (phone flow for the demo section)
+scripts/preflight.sh  the pre-push gate CI mirrors (both databases, contracts, web syntax, Vercel import)
 ```
+
+### The website
+
+| Section | What it shows | How |
+|---|---|---|
+| Hero | Payment card inside a rotating tunnel of real-looking transactions | three.js, pauses off-screen and in background tabs |
+| A real transaction | 15 steps of a recorded gateway run, one per scroll step, narrated | `web/app.js` maps Lenis scroll progress to steps; "Run it live" calls `/api/run` and glides through the result |
+| Watch it in 30 seconds | Phone flow: set a $400 limit, swipe to sign the mandate, the agent pays $349.00 | `scripts/film/phone.html` rendered frame-by-frame with Playwright + ffmpeg (`node scripts/film/render-phone.cjs out 30`) |
+
+Lighthouse (local, desktop): accessibility 95+, best practices 100, SEO 100. Muted text meets WCAG AA,
+headings are in order, everything respects `prefers-reduced-motion` (every step and line of copy shown, no animation).
 
 ## 17. Roadmap
 
@@ -551,7 +567,7 @@ tests/             pytest suite (SQLite + Postgres, EVM, property-based)
 - [ ] Row-level locking + connection pool for multi-replica deployments
 - [ ] Stripe Connect payouts to merchant accounts
 - [ ] Agentic Commerce Protocol (ACP) checkout endpoint compatibility
-- [x] Web frontend with 3D hero, live "Run it live" transactions and demo video
+- [x] Web frontend: 3D hero, scroll-driven transaction replay, live runs, rendered demo film, accessibility pass
 - [ ] OpenTelemetry tracing and Prometheus metrics
 
 ---

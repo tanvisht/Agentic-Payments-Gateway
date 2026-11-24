@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AgentPay | Agentic Payments Gateway</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2215%22 fill=%22%230b0b0b%22/%3E%3Cpath d=%22M9 24 16 7l7 17M11.5 18h9%22 stroke=%22white%22 stroke-width=%221.6%22 fill=%22none%22/%3E%3C/svg%3E">
 <meta name="description" content="A contactless, mandate-bound payment gateway that lets AI agents pay on your behalf: cards via Stripe, on-chain escrow, and x402 stablecoins.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -131,12 +132,12 @@
   <section class="light" id="faq">
     <div class="sec-head" data-reveal="fade"><h2 data-reveal="lines">FREQUENTLY<br>ASKED QUESTIONS</h2><span class="count" id="faq-count">00</span></div>
     <hr>
-    <div class="faq-group" data-reveal="up"><h5>ABOUT AGENTPAY</h5><div class="acc">
+    <div class="faq-group" data-reveal="up"><h3 class="faq-h">ABOUT AGENTPAY</h3><div class="acc">
       <details open><summary>What is AgentPay?</summary><p>A payment gateway built for AI agents. You delegate bounded spending authority once, as a signed mandate. Your agent can then buy on your behalf through any connected rail: cards via Stripe, on-chain escrow, or x402 stablecoins. Every payment is checked against your mandate and a risk engine before money moves.</p></details>
       <details><summary>Does the agent ever see my card?</summary><p>No. You save a card once through a Stripe SetupIntent in your own browser. The agent only ever holds its own signing key and a narrow set of tools: search, check mandate, buy an offer. It cannot even choose a raw amount, only a merchant-signed offer price.</p></details>
       <details><summary>What stops a runaway or hijacked agent?</summary><p>Five independent layers: request signatures with single-use nonces, the signed mandate (limits, merchants, categories, expiry), atomic budget reservation, a risk engine tuned to agent failure modes (velocity, duplicates, near-limit amounts, low reputation), and escalation to you above any threshold you choose.</p></details>
     </div></div>
-    <div class="faq-group" data-reveal="up"><h5>RAILS &amp; MONEY</h5><div class="acc">
+    <div class="faq-group" data-reveal="up"><h3 class="faq-h">RAILS &amp; MONEY</h3><div class="acc">
       <details><summary>Which payment providers are supported?</summary><p>Stripe for cards today, plus an on-chain escrow rail (Solidity, USDC) and x402 stablecoin payments. New processors implement six methods behind one interface. The gateway handles routing, circuit breakers and failover on retryable errors.</p></details>
       <details><summary>How is money accounted for?</summary><p>Every movement is a balanced double-entry journal. Balances are derived, never stored, and the trial balance must always be zero. Property-based tests throw thousands of random payment, capture, cancel and refund sequences at the gateway to prove it.</p></details>
       <details><summary>Can I see everything my agent did?</summary><p>Yes. The per-mandate audit shows what you authorized next to every attempt the agent made, including ones that were blocked. It re-checks each payment against your signed scope and reports what the agent's reasoning cost in LLM tokens.</p></details>
@@ -148,7 +149,7 @@
   <div class="foot-left"><h2 data-reveal="lines">A QUIETER WAY<br>FOR AGENTS TO PAY</h2><a class="pill pill-light" href="https://github.com/tanvisht/Agentic-Payments-Gateway" target="_blank" rel="noopener">Read the Code</a></div>
   <div class="foot-cols" data-stagger>
     <div><span>PROJECT</span><a href="https://github.com/tanvisht/Agentic-Payments-Gateway#3-system-architecture">Architecture</a><a href="https://github.com/tanvisht/Agentic-Payments-Gateway#13-api-reference">API reference</a><a href="#faq">FAQ</a></div>
-    <div><span>BUILT WITH</span><a>Python · FastAPI</a><a>Stripe · Solidity · x402</a><a>Claude agents</a></div>
+    <div><span>BUILT WITH</span><span>Python · FastAPI</span><span>Stripe · Solidity · x402</span><span>Claude agents</span></div>
   </div>
   <p class="fine">AgentPay. Open source under MIT. Demo data is test-mode only.</p>
 </footer>

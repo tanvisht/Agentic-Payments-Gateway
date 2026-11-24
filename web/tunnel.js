@@ -117,7 +117,7 @@ let visible = true;
 new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
 function frame() {
   requestAnimationFrame(frame);
-  if (!visible) return;
+  if (!visible || document.hidden) return;
   const t = clock.getElapsedTime();
   const speed = reduce ? 0 : 1;
   rows.forEach((row, i) => (row.rotation.y = (i % 2 ? -1 : 1) * t * 0.045 * (0.7 + i * 0.15) * speed + scrollP * (i % 2 ? -0.8 : 0.8)));
