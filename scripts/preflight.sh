@@ -23,6 +23,7 @@ if [ -d web ]; then
   node --input-type=module --check < web/tunnel.js
   python3 -c "import json;json.load(open('web/trace.json'))"
   test -s web/vendor/three.module.min.js
+  test -s web/media/demo.mp4
 fi
 echo "== vercel config + serverless function import"
 python3 -c "import json; c=json.load(open('vercel.json')); assert c['outputDirectory']=='web'"

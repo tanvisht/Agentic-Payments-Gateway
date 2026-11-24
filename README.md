@@ -7,7 +7,9 @@
 [![CI](https://github.com/tanvisht/Agentic-Payments-Gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/tanvisht/Agentic-Payments-Gateway/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%2B-black) ![license](https://img.shields.io/badge/license-MIT-black)
 
-**[Live site → agentpay-gateway-navy.vercel.app](https://agentpay-gateway-navy.vercel.app)**
+**[Live site → agentpay-gateway-navy.vercel.app](https://agentpay-gateway-navy.vercel.app)** · [Run a live purchase via API](https://agentpay-gateway-navy.vercel.app/api/run?goal=noise%20cancelling%20headphones&budget=400) · [Demo video (MP4)](https://agentpay-gateway-navy.vercel.app/media/demo.mp4)
+
+<img src="docs/demo.gif" alt="AgentPay demo: an agent negotiates with a merchant, pays under a signed mandate, and a purchase above the mandate is refused" width="760">
 
 </div>
 
@@ -452,6 +454,9 @@ Errors are always `{"error": {"code", "message", "details?"}}` with stable codes
 
 ## 14. Running it
 
+**Live demo API** (no auth, isolated in-memory gateway per request): `GET /api/run?goal=…&budget=…` or `POST /api/run {"goal", "budget"}` on the live site returns the full trace of a real purchase. `python scripts/dev_server.py` serves the site and API locally exactly as deployed.
+
+
 ```bash
 pip install -e ".[dev,agent]"
 ```
@@ -546,7 +551,7 @@ tests/             pytest suite (SQLite + Postgres, EVM, property-based)
 - [ ] Row-level locking + connection pool for multi-replica deployments
 - [ ] Stripe Connect payouts to merchant accounts
 - [ ] Agentic Commerce Protocol (ACP) checkout endpoint compatibility
-- [ ] Premium web frontend with live transaction visualizer and demo video
+- [x] Web frontend with 3D hero, live "Run it live" transactions and demo video
 - [ ] OpenTelemetry tracing and Prometheus metrics
 
 ---
