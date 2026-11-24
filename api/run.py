@@ -41,4 +41,17 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel's required name
             return self._send(500, {"error": "demo run failed"})
 
     def do_GET(self):  # noqa: N802
-        return self._send(200, {"ok": True, "usage": "POST {goal, budget}"})
+        # GET /api/run?goal=...&budget=... runs the same side-effect-free demo (handy for
+        # link sharing and health checks); bare GET just describes the endpoint.
+        from urllib.parse import parse_qs, urlparse
+
+        q = parse_qs(urlparse(getattr(self, "path", "") or "").query)
+        if "goal" not in q:
+            return self._send(200, {"ok": True, "usage": "POST {goal, budget} or GET ?goal=&budget="})
+        try:
+            budget = float(q.get("budget", ["500"])[0])
+            return self._send(200, run_trace(q["goal"][0], budget_cents=int(budget * 100)))
+        except (ValueError, TypeError):
+            return self._send(400, {"error": "invalid request"})
+        except Exception:  # noqa: BLE001
+            return self._send(500, {"error": "demo run failed"})

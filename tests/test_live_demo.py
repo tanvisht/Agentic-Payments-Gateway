@@ -29,12 +29,13 @@ def test_hostile_or_odd_goals_are_bounded(goal):
     assert t["events"]
 
 
-def _call(method, body=None, raw=None):
+def _call(method, body=None, raw=None, path="/api/run"):
     import api.run as fn
 
     data = raw if raw is not None else (json.dumps(body).encode() if body is not None else b"")
     h = object.__new__(fn.handler)
     h.headers = {"content-length": str(len(data))}
+    h.path = path
     h.rfile, h.wfile = io.BytesIO(data), io.BytesIO()
     sent = {}
     h.send_response = lambda s: sent.setdefault("status", s)
@@ -50,3 +51,9 @@ def test_serverless_handler():
     assert _call("POST", raw=b"{nope")[0] == 400
     assert _call("POST", raw=b"x" * 5000)[0] == 413
     assert _call("GET")[0] == 200
+
+
+def test_get_with_goal_runs_trace():
+    status, body = _call("GET", path="/api/run?goal=usb-c%20charger&budget=50")
+    assert status == 200 and "confirmed" in body["result"]
+    assert _call("GET", path="/api/run?goal=x&budget=abc")[0] == 400
