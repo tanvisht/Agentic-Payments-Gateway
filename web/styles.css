@@ -69,7 +69,7 @@ hr{border:0;border-top:1px solid var(--line);margin:48px 0 72px}
 
 /* film */
 .film .sec-head{margin-bottom:48px}
-.film-v{width:100%;max-width:1200px;display:block;margin:0 auto;border-radius:18px;border:1px solid #26292c;background:#111}
+.film-v{width:100%;max-width:min(560px,100%);aspect-ratio:720/900;background:#e9e9e7;display:block;margin:0 auto;border-radius:18px;border:1px solid #26292c;background:#111}
 
 /* demo */
 .demo-top{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;margin-bottom:36px}

@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- Deterministic phone-flow film for the "Watch it in 30 seconds" section.
+     window.renderAt(t) draws the frame at time t (seconds); render-phone.cjs captures frames. -->
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Inter;src:local("Inter")}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:720px;height:900px;overflow:hidden;background:radial-gradient(120% 90% at 50% 40%,#f4f4f3,#e6e6e4);font-family:Inter,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.phone{position:absolute;left:163px;top:36px;width:394px;height:828px;border-radius:64px;background:linear-gradient(145deg,#cfd0d2,#8d8f93 40%,#e3e4e6 60%,#9a9ca0);padding:5px;box-shadow:0 40px 80px -30px rgba(0,0,0,.45),0 12px 30px -10px rgba(0,0,0,.25)}
+.screen{position:relative;width:100%;height:100%;border-radius:59px;overflow:hidden;background:linear-gradient(180deg,#14121c 0%,#0b0a10 45%,#08080a 100%);border:6px solid #050505}
+.status{position:absolute;top:22px;left:40px;right:34px;display:flex;justify-content:space-between;color:#fff;font-size:15px;font-weight:600;z-index:20}
+.island{position:absolute;top:13px;left:50%;width:118px;height:34px;margin-left:-59px;border-radius:20px;background:#000;z-index:21}
+.icons{display:flex;gap:6px;align-items:center}
+.icons i{display:block;background:#fff;border-radius:2px}
+.layer{position:absolute;inset:0}
+.top{position:absolute;top:66px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:600}
+.top .back{position:absolute;left:26px;top:0;font-weight:400}
+.amt{position:absolute;top:118px;left:0;right:0;text-align:center;color:#fff}
+.amt b{display:block;font-size:64px;font-weight:700;letter-spacing:-2.5px;line-height:1}
+.amt small{display:block;font-size:10px;margin-top:8px;color:#cfcfd4}
+.amt em{display:block;font-style:normal;font-size:9px;margin-top:4px;color:#8a8a92}
+.picker{position:absolute;top:250px;left:0;right:0;height:60px;overflow:hidden}
+.picker .row{position:absolute;left:0;right:0;text-align:center;color:#fff;font-size:13px;font-weight:600;height:20px;line-height:20px}
+.picker .row span{color:#7d7d86;font-weight:400;font-size:10px;margin-left:6px}
+.picker .chev{position:absolute;right:24px;top:20px;color:#77777f;font-size:10px}
+.pad{position:absolute;top:318px;left:30px;right:30px;display:grid;grid-template-columns:repeat(3,1fr);row-gap:22px;color:#fff;font-size:20px;text-align:center}
+.pad div{height:36px;line-height:36px;position:relative}
+.pad div.hit::before{content:"";position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:rgba(255,255,255,.22)}
+.swipe{position:absolute;left:18px;right:18px;bottom:28px;height:48px;border-radius:26px;background:#1c1c21;overflow:hidden}
+.swipe .fill{position:absolute;left:0;top:0;bottom:0;border-radius:26px;background:linear-gradient(90deg,#1f3b2b,#2d6a47)}
+.swipe .knob{position:absolute;top:6px;width:36px;height:36px;border-radius:50%;background:#f3f3f1;color:#111;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+.swipe .label{position:absolute;inset:0;text-align:center;line-height:48px;color:#c9c9cf;font-size:12px}
+.touch{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:rgba(150,150,160,.55);border:1px solid rgba(255,255,255,.35);z-index:30}
+.glow{position:absolute;left:-40px;right:-40px;height:360px;filter:blur(34px)}
+.glow i{position:absolute;border-radius:50%}
+.tag{position:absolute;left:0;right:0;text-align:center;font:600 9.5px/1 "DejaVu Sans Mono",monospace;letter-spacing:2.2px;color:#e8e8ec}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:14px;background:rgba(40,200,110,.12);color:#5ee39a}
+.ok{width:12px;height:12px;border-radius:50%;background:#5ee39a;display:inline-block;position:relative}
+.ok::after{content:"";position:absolute;left:3.5px;top:2px;width:3px;height:6px;border:solid #0b1a12;border-width:0 1.6px 1.6px 0;transform:rotate(45deg)}
+.card{position:absolute;left:44px;top:110px;width:282px;height:420px;border-radius:18px;background:
+ radial-gradient(60% 40% at 70% 75%,rgba(255,255,255,.10),transparent 70%),
+ radial-gradient(80% 50% at 20% 10%,rgba(255,255,255,.07),transparent 70%),
+ linear-gradient(160deg,#2a2a2e,#18181b 55%,#101012);box-shadow:0 30px 60px -20px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.06);overflow:hidden}
+.card::before{content:"";position:absolute;inset:0;opacity:.35;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+.card .sheen{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.10) 50%,transparent 60%)}
+.card .emv{position:absolute;left:22px;top:22px;width:38px;height:28px;border-radius:6px;background:linear-gradient(135deg,#e6e6e6,#9d9d9d);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.card .emv::after{content:"";position:absolute;inset:7px 9px;border:1px solid rgba(0,0,0,.3);border-radius:2px}
+.card .nfc{position:absolute;left:68px;top:28px;color:#8b8b90;font-size:12px}
+.card .brand{position:absolute;right:22px;top:28px;font:500 9px/1 "DejaVu Sans Mono",monospace;letter-spacing:3px;color:#8b8b90}
+.card .logo{position:absolute;left:22px;bottom:22px;display:flex;align-items:center;gap:8px;color:#fff;font-size:20px;font-weight:600;letter-spacing:.5px}
+.card .logo i{width:22px;height:22px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;font-weight:400}
+.card .num{position:absolute;right:22px;bottom:28px;font:500 10px/1 "DejaVu Sans Mono",monospace;letter-spacing:2px;color:#9c9ca2}
+.res{position:absolute;left:0;right:0;top:548px;text-align:center;color:#fff}
+.res b{display:block;font-size:44px;font-weight:700;letter-spacing:-1.5px}
+.pill{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:12px;background:#1d1d22;color:#b8b8bf;font-size:10.5px}
+.pill strong{color:#fff;margin-left:3px}
+.done{position:absolute;left:18px;right:18px;bottom:28px;height:46px;border-radius:24px;background:#f2f2ef;color:#111;text-align:center;line-height:46px;font-size:14px;font-weight:500}
+</style></head><body>
+<div class="phone"><div class="screen" id="screen">
+  <div class="island"></div>
+  <div class="status"><span>9:41</span><span class="icons"><i style="width:3px;height:5px"></i><i style="width:3px;height:7px"></i><i style="width:3px;height:9px"></i><i style="width:3px;height:11px;margin-right:6px"></i><i style="width:24px;height:11px;border-radius:3px"></i></span></div>
+
+  <div class="layer" id="entry">
+    <div class="top"><span class="back">←</span>Agent spending limit</div>
+    <div class="amt"><b id="amt">$0</b><small>USD · PER PURCHASE</small><em id="sub">mandate expires in 7 days</em></div>
+    <div class="picker"><div id="rows"></div><span class="chev">⌃⌄</span></div>
+    <div class="pad" id="pad"></div>
+    <div class="swipe"><div class="fill" id="fill"></div><div class="label" id="slabel"></div><div class="knob" id="knob">→</div></div>
+  </div>
+
+  <div class="layer" id="glowL"><div class="glow" id="glow"><i style="left:6%;top:30%;width:46%;height:70%;background:#1fd66f"></i><i style="left:30%;top:20%;width:44%;height:80%;background:#ffe2c4"></i><i style="left:58%;top:26%;width:46%;height:70%;background:#ff3b30"></i></div></div>
+  <div class="tag" id="tag1" style="top:395px">● AGENT PURCHASING · $349.00</div>
+  <div class="tag" id="tag2" style="top:395px"><span class="ok" style="vertical-align:-2px;margin-right:6px"></span>PAYMENT CONFIRMED</div>
+
+  <div class="layer" id="done">
+    <div class="tag" style="top:62px"><span class="chip"><span class="ok"></span>PAYMENT CONFIRMED</span></div>
+    <div class="card" id="card"><div class="sheen" id="sheen"></div><div class="emv"></div><div class="nfc">))</div><div class="brand">MANDATE</div>
+      <div class="num">•••• 4242</div><div class="logo"><i>A</i>agentpay</div></div>
+    <div class="res"><b id="paid">$0.00</b><span class="pill" id="pill">Mandate left <strong>$51.00</strong></span></div>
+    <div class="done" id="donebtn">Done</div>
+  </div>
+  <div class="touch" id="touch"></div>
+</div></div>
+<script>
+const $=id=>document.getElementById(id);
+const keys=["1","2","3","4","5","6","7","8","9",".","0","←"];
+$("pad").innerHTML=keys.map(k=>`<div data-k="${k}">${k}</div>`).join("");
+const agents=[["Travel agent","•• A1C9","$1,200 cap"],["Shopping agent","•• 7F2E","$400 cap"],["Research agent","•• 03BD","$50 cap"]];
+$("rows").innerHTML=agents.map(a=>`<div class="row">${a[0]} ${a[1]}<span>${a[2]}</span></div>`).join("");
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)), lin=(t,a,b)=>cl((t-a)/(b-a));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, out=x=>1-Math.pow(1-x,3);
+const padPos=k=>{const i=keys.indexOf(k);return[30+((312/3)*(i%3+.5)),318+18+(i/3|0)*58]};
+// touch path: [time, x, y, visible]
+const taps=[[0.7,"4"],[1.35,"0"],[2.0,"0"]];
+function touchAt(t){
+  const P=[[0.35,...padPos("4")],[0.7,...padPos("4")],[1.15,...padPos("0")],[1.35,...padPos("0")],[1.8,...padPos("0")],[2.0,...padPos("0")],
+    [2.6,170,270],[2.9,170,270],[3.4,170,250],[3.7,170,250],[4.3,30,768],[4.5,30,768],[5.3,324,768]];
+  if(t<0.35||(t>5.35&&t<10.0)||t>12.4) return null;
+  if(t>=10){const k=(t-10)/2.4;return[150+130*Math.sin(k*5.2),250+120*Math.cos(k*3.7)];}
+  for(let i=0;i<P.length-1;i++){if(t<=P[i+1][0]){const k=ease(lin(t,P[i][0],P[i+1][0]));return[P[i][1]+(P[i+1][1]-P[i][1])*k,P[i][2]+(P[i+1][2]-P[i][2])*k];}}
+  return [P.at(-1)[1],P.at(-1)[2]];
+}
+window.renderAt=function(t){
+  // amount entry
+  const typed=taps.filter(x=>t>=x[0]).map(x=>x[1]).join("");
+  const amtTxt="$"+(typed||"0");
+  $("amt").textContent=amtTxt; $("amt").style.color=typed?"#fff":"#5a5a62";
+  document.querySelectorAll(".pad div").forEach(d=>d.classList.toggle("hit",taps.some(x=>x[1]===d.dataset.k&&t>=x[0]&&t<x[0]+0.22)));
+  // agent picker scroll (Travel -> Shopping)
+  const pk=ease(lin(t,3.0,3.45)), wob=t>2.9&&t<3.6;
+  [...$("rows").children].forEach((r,i)=>{const y=20+(i-pk)*19;r.style.top=y+"px";const d=Math.abs(i-pk);r.style.opacity=wob?String(cl(1-d*0.75,0.1)):(d<0.5?"1":"0");r.style.fontSize=(13-d*2)+"px";});
+  // swipe
+  const sw=out(lin(t,4.5,5.3)), w=294;
+  $("knob").style.left=(6+sw*w)+"px"; $("knob").textContent=t>5.35?"✓":"→";
+  $("knob").style.background=t>5.35?"#5ee39a":"#f3f3f1";
+  $("fill").style.width=(sw>0?42+sw*w:0)+"px";
+  $("slabel").textContent=`Swipe to sign mandate ${amtTxt}  »`; $("slabel").style.opacity=String(1-sw*1.6);
+  // processing: blur entry, glow rises from bottom then flips to top
+  const blur=lin(t,5.55,6.1);
+  $("entry").style.filter=`blur(${blur*14}px)`; $("entry").style.opacity=String(1-lin(t,7.7,8.1));
+  const g1=lin(t,5.7,6.4), g2=lin(t,7.5,8.0), gFade=lin(t,8.4,9.2);
+  const gy=t<7.75? 900-g1*380 + Math.sin(t*3)*8 : -170+ (1-g2)*60;
+  $("glow").style.top=gy+"px"; $("glow").style.opacity=String((t<7.75?g1:1)*(1-gFade)*(t>7.6&&t<7.8?0.6:1));
+  $("glow").style.transform=`scaleY(${t<7.75?1:-1}) translateX(${Math.sin(t*1.7)*14}px)`;
+  $("tag1").style.opacity=String(lin(t,6.0,6.4)*(1-lin(t,7.5,7.7))*(0.75+0.25*Math.sin(t*9)));
+  $("tag2").style.opacity=String(lin(t,7.7,8.0)*(1-lin(t,8.7,8.95)));
+  // result
+  const cIn=lin(t,8.7,9.5);
+  $("done").style.opacity=String(cIn);
+  $("card").style.filter=`blur(${(1-out(lin(t,8.7,9.6)))*12}px)`;
+  const tp=touchAt(t);
+  let rx=0,ry=0; if(tp&&t>=10){rx=-(tp[1]-330)/24;ry=(tp[0]-180)/18;}
+  const settle=1-out(lin(t,12.2,12.9));
+  $("card").style.transform=`perspective(900px) rotateX(${rx*settle}deg) rotateY(${ry*settle}deg) scale(${0.94+0.06*out(cIn)})`;
+  $("sheen").style.transform=`translateX(${(ry*settle)*6 + (t-9)*14}px)`;
+  const money=349*out(lin(t,9.0,9.9));
+  $("paid").textContent="$"+money.toFixed(2);
+  $("pill").style.opacity=String(lin(t,9.8,10.1)); $("donebtn").style.opacity=String(lin(t,9.9,10.3));
+  $("donebtn").style.transform=`translateY(${(1-out(lin(t,9.9,10.3)))*14}px)`;
+  // touch indicator
+  const T=$("touch"); if(tp){T.style.display="block";T.style.left=tp[0]+"px";T.style.top=tp[1]+"px";T.style.opacity=t>=10?"0.7":"1";}else T.style.display="none";
+};
+renderAt(0);
+</script></body></html>
