@@ -20,6 +20,8 @@ fi
 if [ -d web ]; then
   echo "== web: html/js syntax"
   node --check web/app.js
+  node --check web/motion.js
+  test -s web/vendor/lenis.min.js && test -s web/vendor/lenis.css
   node --input-type=module --check < web/tunnel.js
   python3 -c "import json;json.load(open('web/trace.json'))"
   test -s web/vendor/three.module.min.js
