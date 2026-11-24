@@ -18,12 +18,10 @@ h1,h2{text-transform:uppercase;letter-spacing:-.035em;line-height:.92;font-weigh
 
 /* hero */
 .hero{position:relative;height:100vh;min-height:640px;background:var(--ink);overflow:hidden}
-.hero-media{position:absolute;inset:0;overflow:hidden;will-change:transform}
-.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#070707}
+#tunnel{position:absolute;inset:0;width:100%;height:100%;display:block}
 .hero-shade{position:absolute;inset:auto 0 0 0;height:42%;background:linear-gradient(transparent,var(--ink) 85%);pointer-events:none}
 .hero-copy{position:absolute;left:0;right:0;bottom:5vh;text-align:center;color:#e9ecec;pointer-events:none}
-.hero-copy h1{font-size:clamp(44px,6.4vw,92px);margin-bottom:5vh}
-html:not(.motion) .hero-copy h1{opacity:0;animation:rise 1.6s .5s cubic-bezier(.2,.7,.2,1) forwards}
+.hero-copy h1{font-size:clamp(44px,6.4vw,92px);margin-bottom:5vh;opacity:0;transform:translateY(24px);animation:rise 1.6s .5s cubic-bezier(.2,.7,.2,1) forwards}
 .hero-copy .pill{pointer-events:auto;padding:22px 104px;opacity:0;animation:rise 1.4s .9s cubic-bezier(.2,.7,.2,1) forwards}
 @keyframes rise{to{opacity:1;transform:none}}
 

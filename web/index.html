@@ -27,15 +27,10 @@
 </nav>
 
 <header class="hero" id="top">
-  <div class="hero-media" data-scrub="hero-media">
-    <video class="hero-video" id="hero-video" autoplay muted loop playsinline preload="auto" poster="media/hero-poster.jpg"
-      aria-label="Film: a metal AgentPay card turning inside a tunnel of rooms">
-      <source src="media/hero.mp4" type="video/mp4">
-    </video>
-  </div>
+  <canvas id="tunnel" aria-label="3D tunnel of agent transactions orbiting a payment card"></canvas>
   <div class="hero-shade"></div>
   <div class="hero-copy" data-scrub="hero">
-    <h1 data-reveal="lines" class="hero-h1">THE AGENT PAYS.<br>YOU STAY IN CONTROL.</h1>
+    <h1>THE AGENT PAYS.<br>YOU STAY IN CONTROL.</h1>
     <a class="pill pill-light" href="#demo">Watch It Transact</a>
   </div>
 </header>
@@ -159,6 +154,7 @@
 </footer>
 
 <script src="vendor/lenis.min.js" defer></script>
+<script type="module" src="tunnel.js"></script>
 <script src="motion.js" defer></script>
 <script src="app.js" defer></script>
 </body>
